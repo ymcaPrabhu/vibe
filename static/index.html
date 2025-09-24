@@ -3,13 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cybersecurity Research App</title>
+    <title>Cybersecurity Research Platform | Advanced AI-Powered Analysis</title>
+    <meta name="description" content="Professional cybersecurity research platform with AI-powered analysis and real-time insights">
     <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div id="app">
         <header>
-            <h1>Cybersecurity Research Assistant</h1>
+            <div class="header-content">
+                <div class="logo-section">
+                    <i class="fas fa-shield-alt header-icon"></i>
+                    <h1>Cybersecurity Research Platform</h1>
+                </div>
+                <div class="header-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span id="active-research">0 Active</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-database"></i>
+                        <span id="total-reports">0 Reports</span>
+                    </div>
+                </div>
+            </div>
         </header>
         
         <main>
@@ -17,10 +35,16 @@
                 <!-- Left Panel: Collapsible History -->
                 <div id="history-panel" class="panel left-panel">
                     <div class="panel-header">
-                        <h2>Research History</h2>
-                        <button id="toggle-history" class="toggle-btn">Hide</button>
+                        <h2><i class="fas fa-history"></i> Research History</h2>
+                        <button id="toggle-history" class="toggle-btn">
+                            <i class="fas fa-eye"></i> <span>Hide</span>
+                        </button>
                     </div>
                     <div id="history-list" class="panel-content">
+                        <div class="search-box">
+                            <input type="text" id="search-history" placeholder="Search research history...">
+                            <i class="fas fa-search"></i>
+                        </div>
                         <ul id="job-history"></ul>
                     </div>
                 </div>
@@ -28,26 +52,46 @@
                 <!-- Right Panel: Research Interface -->
                 <div id="research-panel" class="panel right-panel">
                     <div class="panel-header">
-                        <h2>New Research Topic</h2>
+                        <h2><i class="fas fa-brain"></i> New Research Analysis</h2>
                     </div>
                     <div class="panel-content">
+                        <div class="welcome-section">
+                            <h3><i class="fas fa-rocket"></i> Start Advanced Research</h3>
+                            <p>Enter your cybersecurity topic below to initiate comprehensive analysis using AI-powered research</p>
+                        </div>
+                        
                         <form id="research-form">
                             <div class="input-group">
-                                <label for="topic">Topic:</label>
-                                <input type="text" id="topic" name="topic" required placeholder="Enter your research topic">
+                                <label for="topic"><i class="fas fa-key"></i> Research Topic</label>
+                                <input type="text" id="topic" name="topic" required placeholder="Enter your research topic (e.g., Zero Trust Architecture, Ransomware Prevention, etc.)">
                             </div>
                             
                             <div class="input-group">
-                                <label for="depth">Depth (1-5):</label>
-                                <input type="number" id="depth" name="depth" min="1" max="5" value="3" required>
+                                <label for="depth"><i class="fas fa-layer-group"></i> Research Depth</label>
+                                <div class="depth-selector">
+                                    <input type="range" id="depth-slider" min="1" max="5" value="3" class="slider">
+                                    <div class="depth-labels">
+                                        <span class="depth-label active" data-value="1">Basic</span>
+                                        <span class="depth-label" data-value="2">Standard</span>
+                                        <span class="depth-label" data-value="3">Comprehensive</span>
+                                        <span class="depth-label" data-value="4">Advanced</span>
+                                        <span class="depth-label" data-value="5">Expert</span>
+                                    </div>
+                                    <input type="hidden" id="depth" name="depth" value="3">
+                                </div>
                             </div>
                             
-                            <button type="submit" id="submit-btn">Start Research</button>
+                            <button type="submit" id="submit-btn">
+                                <i class="fas fa-paper-plane"></i> <span>Initiate Research</span>
+                            </button>
                         </form>
                         
                         <div id="progress-container" class="progress-container" style="display: none;">
-                            <div id="overall-progress" class="progress-bar">
-                                <div class="progress-fill" style="width: 0%;"></div>
+                            <h4><i class="fas fa-sync-alt fa-spin"></i> Research Progress</h4>
+                            <div class="overall-progress">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 0%;"></div>
+                                </div>
                                 <span class="progress-text">0%</span>
                             </div>
                         </div>
@@ -57,7 +101,26 @@
                         </div>
                         
                         <div id="results-container" class="results-container">
+                            <div class="results-header">
+                                <h3><i class="fas fa-file-alt"></i> Research Findings</h3>
+                                <div class="results-actions">
+                                    <button class="export-btn" id="export-pdf" title="Export to PDF">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </button>
+                                    <button class="export-btn" id="export-word" title="Export to Word">
+                                        <i class="fas fa-file-word"></i> DOC
+                                    </button>
+                                    <button class="export-btn" id="export-markdown" title="Export to Markdown">
+                                        <i class="fab fa-markdown"></i> MD
+                                    </button>
+                                </div>
+                            </div>
                             <div id="results-content" class="results-content">
+                                <div class="welcome-message">
+                                    <i class="fas fa-chart-network fa-3x"></i>
+                                    <h3>Research Insights Awaiting</h3>
+                                    <p>Submit a topic to begin advanced cybersecurity analysis</p>
+                                </div>
                                 <!-- Results will appear here -->
                             </div>
                         </div>
@@ -65,6 +128,23 @@
                 </div>
             </div>
         </main>
+        
+        <footer class="app-footer">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Cybersecurity Research Platform</h4>
+                    <p>AI-powered analysis for modern security challenges</p>
+                </div>
+                <div class="footer-section">
+                    <h4>Powered By</h4>
+                    <p>OpenRouter AI • Alibaba Tongyi DeepResearch</p>
+                </div>
+                <div class="footer-section">
+                    <h4>© 2025</h4>
+                    <p>All rights reserved</p>
+                </div>
+            </div>
+        </footer>
     </div>
     
     <script src="/static/js/marked.min.js"></script>

@@ -3,34 +3,117 @@ document.addEventListener('DOMContentLoaded', function() {
     const researchForm = document.getElementById('research-form');
     const topicInput = document.getElementById('topic');
     const depthInput = document.getElementById('depth');
+    const depthSlider = document.getElementById('depth-slider');
     const submitBtn = document.getElementById('submit-btn');
     const progressContainer = document.getElementById('progress-container');
-    const overallProgressFill = document.querySelector('#overall-progress .progress-fill');
-    const overallProgressText = document.querySelector('#overall-progress .progress-text');
+    const overallProgressFill = document.querySelector('#progress-container .progress-fill');
+    const overallProgressText = document.querySelector('#progress-container .progress-text');
     const workersContainer = document.getElementById('workers-container');
     const resultsContent = document.getElementById('results-content');
     const toggleHistoryBtn = document.getElementById('toggle-history');
     const historyPanel = document.getElementById('history-panel');
     const jobHistoryList = document.getElementById('job-history');
+    const depthLabels = document.querySelectorAll('.depth-label');
+    const searchHistory = document.getElementById('search-history');
+    const activeResearchCount = document.getElementById('active-research');
+    const totalReportsCount = document.getElementById('total-reports');
+    
+    // Export buttons
+    const exportPdfBtn = document.getElementById('export-pdf');
+    const exportWordBtn = document.getElementById('export-word');
+    const exportMdBtn = document.getElementById('export-markdown');
     
     // State
     let currentJobId = null;
     let eventSource = null;
     let workerProgress = {};
     let workerTitles = {};
+    let jobHistory = [];
     
     // Set focus on topic input
     topicInput.focus();
     
+    // Initialize depth slider
+    updateDepthSlider();
+    
+    // Set up depth slider event listeners
+    depthSlider.addEventListener('input', updateDepthSlider);
+    
+    // Set up depth label event listeners
+    depthLabels.forEach(label => {
+        label.addEventListener('click', function() {
+            const value = parseInt(this.getAttribute('data-value'));
+            depthSlider.value = value;
+            depthInput.value = value;
+            updateDepthSlider();
+        });
+    });
+    
+    // Function to update the slider and associated labels
+    function updateDepthSlider() {
+        const value = depthSlider.value;
+        depthInput.value = value;
+        
+        // Update active label
+        depthLabels.forEach(label => {
+            if (parseInt(label.getAttribute('data-value')) == value) {
+                label.classList.add('active');
+            } else {
+                label.classList.remove('active');
+            }
+        });
+    }
+    
     // Toggle history panel
     toggleHistoryBtn.addEventListener('click', function() {
+        const spanText = this.querySelector('span');
+        const icon = this.querySelector('i');
+        
         if (historyPanel.style.display === 'none' || historyPanel.style.display === '') {
             historyPanel.style.display = 'flex';
-            toggleHistoryBtn.textContent = 'Hide';
+            spanText.textContent = 'Hide';
+            icon.className = 'fas fa-eye-slash';
         } else {
             historyPanel.style.display = 'none';
-            toggleHistoryBtn.textContent = 'Show';
+            spanText.textContent = 'Show';
+            icon.className = 'fas fa-eye';
         }
+    });
+    
+    // Search history functionality
+    searchHistory.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        filterHistory(searchTerm);
+    });
+    
+    // Function to filter history based on search term
+    function filterHistory(searchTerm) {
+        const filteredJobs = jobHistory.filter(job => 
+            job.topic.toLowerCase().includes(searchTerm) ||
+            job.status.toLowerCase().includes(searchTerm)
+        );
+        
+        renderJobHistory(filteredJobs);
+    }
+    
+    // Export functionality - placeholder for now
+    exportPdfBtn.addEventListener('click', function() {
+        alert('PDF export functionality would be implemented here');
+    });
+    
+    exportWordBtn.addEventListener('click', function() {
+        alert('Word export functionality would be implemented here');
+    });
+    
+    exportMdBtn.addEventListener('click', function() {
+        const markdownContent = resultsContent.innerText || resultsContent.textContent;
+        const blob = new Blob([markdownContent], { type: 'text/markdown' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'research-report.md';
+        a.click();
+        window.URL.revokeObjectURL(url);
     });
     
     // Submit research request
@@ -50,12 +133,20 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Update active research counter
+        activeResearchCount.textContent = '1 Active';
+        
         // Disable form and show progress
         submitBtn.disabled = true;
-        submitBtn.textContent = 'Researching...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Researching...</span>';
         progressContainer.style.display = 'block';
         workersContainer.innerHTML = '';
-        resultsContent.innerHTML = '';
+        
+        // Clear welcome message if present
+        const welcomeMessage = resultsContent.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
+        }
         
         try {
             // Submit the job
@@ -107,6 +198,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     eventSource = null;
                     resetForm();
                     loadJobHistory();
+                    
+                    // Update counters
+                    activeResearchCount.textContent = '0 Active';
+                    // In a real app, we would increment the total reports counter
                 }
             } catch (error) {
                 console.error('Error processing event:', error);
@@ -129,11 +224,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add content to results display
     function addContentToResults(data) {
-        // Convert markdown to HTML (simplified version)
         const content = data.text || '';
         
-        // For now, we'll just add the raw content
-        // In a real app, we'd use a proper markdown parser
+        // Check if we need to replace the welcome message
+        const welcomeMessage = resultsContent.querySelector('.welcome-message');
+        if (welcomeMessage) {
+            welcomeMessage.remove();
+        }
+        
+        // Parse and add the markdown content
         const contentDiv = document.createElement('div');
         contentDiv.innerHTML = marked.parse(content);
         resultsContent.appendChild(contentDiv);
@@ -169,8 +268,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             workerElement.innerHTML = `
                 <div class="worker-header">
-                    <div class="worker-title">${sectionTitle}</div>
-                    <button class="worker-pin" title="Pin worker">📌</button>
+                    <div class="worker-title"><i class="fas fa-cogs"></i> ${sectionTitle}</div>
+                    <button class="worker-pin" title="Pin worker"><i class="fas fa-thumbtack"></i></button>
                 </div>
                 <div class="worker-progress-bar">
                     <div class="worker-progress-fill" style="width: ${progress}%"></div>
@@ -185,7 +284,9 @@ document.addEventListener('DOMContentLoaded', function() {
             pinBtn.addEventListener('click', function() {
                 // Toggle pinned state
                 workerElement.classList.toggle('pinned');
-                pinBtn.textContent = workerElement.classList.contains('pinned') ? '📍' : '📌';
+                const icon = pinBtn.querySelector('i');
+                icon.className = workerElement.classList.contains('pinned') ? 'fas fa-thumbtack' : 'fas fa-thumbtack';
+                // In a real implementation, we would rotate the icon when pinned
             });
         } else {
             // Update existing progress bar
@@ -195,7 +296,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             progressFill.style.width = `${progress}%`;
             progressText.textContent = `${progress}%`;
-            titleElement.textContent = sectionTitle;
+            // Keep icon in title but update text
+            titleElement.innerHTML = `<i class="fas fa-cogs"></i> ${sectionTitle}`;
         }
     }
     
@@ -204,7 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const progressValues = Object.values(workerProgress);
         if (progressValues.length === 0) {
             overallProgressFill.style.width = '0%';
-            overallProgressText.textContent = '0%';
             return;
         }
         
@@ -212,13 +313,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const avgProgress = Math.round(totalProgress / progressValues.length);
         
         overallProgressFill.style.width = `${avgProgress}%`;
-        overallProgressText.textContent = `${avgProgress}%`;
     }
     
     // Reset form after completion
     function resetForm() {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Start Research';
+        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>Initiate Research</span>';
     }
     
     // Load job history
@@ -229,8 +329,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             
-            const jobs = await response.json();
-            renderJobHistory(jobs);
+            jobHistory = await response.json();
+            
+            // Update total reports counter
+            totalReportsCount.textContent = `${jobHistory.length} Reports`;
+            
+            renderJobHistory(jobHistory);
         } catch (error) {
             console.error('Error loading job history:', error);
         }
@@ -241,21 +345,28 @@ document.addEventListener('DOMContentLoaded', function() {
         jobHistoryList.innerHTML = '';
         
         if (jobs.length === 0) {
-            jobHistoryList.innerHTML = '<li><em>No research history yet</em></li>';
+            jobHistoryList.innerHTML = '<div class="no-results"><i class="fas fa-inbox"></i> <p>No research history yet</p></div>';
             return;
         }
         
         jobs.forEach(job => {
             const li = document.createElement('li');
             li.className = 'job-item';
+            
+            // Format status class
+            const statusClass = `status-${job.status.toLowerCase().replace(' ', '-')}`;
+            
             li.innerHTML = `
-                <div class="job-topic">${job.topic}</div>
-                <div class="job-meta">Depth: ${job.depth} | ${formatDate(job.created_at)} | Status: ${job.status}</div>
+                <div class="job-topic"><i class="fas fa-file-alt"></i> ${job.topic}</div>
+                <div class="job-meta">
+                    <div>Depth: ${job.depth} • ${formatDate(job.created_at)}</div>
+                    <div class="job-status ${statusClass}">${job.status}</div>
+                </div>
             `;
             
             li.addEventListener('click', () => {
                 // Load job results (in a real app, this would load the full results)
-                resultsContent.innerHTML = `<p>Loading results for: ${job.topic}...</p>`;
+                resultsContent.innerHTML = `<div class="loading-results"><i class="fas fa-spinner fa-spin"></i> Loading results for: ${job.topic}</div>`;
             });
             
             jobHistoryList.appendChild(li);
