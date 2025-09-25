@@ -285,6 +285,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Close mobile sidebar if open
             closeMobileSidebar();
 
+            // Update progress indicator to show initialization
+            updateOverallProgress(5); // Start with 5% to show it's initialized
+
             showToast('Research started successfully', 'success');
 
         } catch (error) {
@@ -656,7 +659,19 @@ The information provided in this research report is for educational and informat
             progressIndicator.classList.add('show');
             // Add the progress indicator to the chat messages area
             if (chatMessages) {
+                // Make sure the progress indicator is properly positioned in the chat flow
                 chatMessages.appendChild(progressIndicator);
+                
+                // Update the message to reflect initialization
+                const progressTitle = document.querySelector('.inline-progress-title');
+                if (progressTitle) {
+                    progressTitle.textContent = 'Research Initialized';
+                }
+                
+                const progressText = document.querySelector('.inline-progress-text');
+                if (progressText) {
+                    progressText.textContent = 'Processing your request...';
+                }
             }
         }
     }
@@ -687,6 +702,8 @@ The information provided in this research report is for educational and informat
     function setLoadingState(loading) {
         if (loadingOverlay) {
             if (loading) {
+                // Keep the loading effect only for initial request processing
+                // The progress indicator will show ongoing progress
                 loadingOverlay.classList.remove('d-none');
             } else {
                 loadingOverlay.classList.add('d-none');
