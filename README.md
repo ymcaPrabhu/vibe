@@ -55,6 +55,21 @@ npm start
 
 The application will be accessible at `http://localhost:3000` (or the port specified in your environment).
 
+## Deploying to Railway
+
+This application is configured for easy deployment to Railway with PostgreSQL support:
+
+1. Create a new project on [Railway](https://railway.app)
+2. Connect your GitHub repository or push directly
+3. When prompted for build settings, Railway will automatically detect this as a Node.js application
+4. Add a PostgreSQL database through the Railway dashboard (Addons tab → + New Addon → PostgreSQL)
+5. Add your environment variables in the Variables tab:
+   - Set `OPENROUTER_API_KEY` to your OpenRouter API key
+6. The `DATABASE_URL` will be automatically set when you add the PostgreSQL addon
+7. Deploy the application
+
+The application will automatically detect and connect to PostgreSQL when deployed on Railway.
+
 ## API Endpoints
 
 - `GET /` - Main application interface

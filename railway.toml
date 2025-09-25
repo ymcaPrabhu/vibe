@@ -1,0 +1,30 @@
+# Railway configuration file
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm start"
+numReplicas = 1
+sleepApplication = false
+
+[variables]
+DATABASE_URL = {
+    description = "PostgreSQL database connection URL",
+    required = true,
+    example = "postgresql://username:password@ep-xxx.us-east-1.aws.neon.tech/dbname"
+}
+OPENROUTER_API_KEY = {
+    description = "OpenRouter API key for LLM access",
+    required = true,
+    example = "sk-or-v1-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+}
+LLM_MODEL = {
+    description = "Model to use for LLM calls",
+    required = false,
+    default = "alibaba/tongyi-deepresearch-30b-a3b"
+}
+PORT = {
+    description = "Port to run the application on",
+    required = false,
+    default = "8080"
+}

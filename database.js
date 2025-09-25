@@ -5,11 +5,15 @@ const path = require('path');
 class Database {
   constructor(databaseUrl) {
     this.databaseUrl = databaseUrl;
-    this.isPostgres = databaseUrl && databaseUrl.startsWith('postgres://');
+    this.isPostgres = databaseUrl && (databaseUrl.startsWith('postgres://') || databaseUrl.startsWith('postgresql://'));
     
     if (this.isPostgres) {
+      // Configure for Railway PostgreSQL with SSL
       this.client = new Client({
         connectionString: databaseUrl,
+        ssl: {
+          rejectUnauthorized: false // Required for Railway PostgreSQL
+        }
       });
     } else {
       // Use SQLite as fallback

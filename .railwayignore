@@ -1,10 +1,9 @@
-static/js/
 node_modules/
-package.json
-package-lock.json
-*.md
-.env
 dev.db
+dev.db-shm
+dev.db-wal
+.env
+*.md
 .netlify/
 netlify.toml
 build.sh
