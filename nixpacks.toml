@@ -1,5 +1,6 @@
 [phases.setup]
 nixPkgs = ['cargo', 'rustc', 'pkg-config', 'openssl']
+nixLibs = ['openssl']
 
 [phases.build]
 cmds = [
@@ -13,3 +14,6 @@ cmd = './target/release/cybersecurity-research-app'
 [variables]
 RUST_LOG = 'info'
 PORT = '3000'
+
+[providers]
+rust = true
