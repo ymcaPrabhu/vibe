@@ -1,19 +1,12 @@
 [phases.setup]
-nixPkgs = ['cargo', 'rustc', 'pkg-config', 'openssl']
-nixLibs = ['openssl']
+nixPkgs = ["cargo", "rustc", "pkg-config", "openssl"]
 
 [phases.build]
-cmds = [
-  'cargo build --release',
-  'ls -la target/release/'
-]
+cmds = ["cargo build --release"]
 
 [phases.start]
-cmd = './target/release/cybersecurity-research-app'
+cmd = "./target/release/cybersecurity-research-app"
 
 [variables]
-RUST_LOG = 'info'
-PORT = '3000'
-
-[providers]
-rust = true
+RUST_LOG = "info"
+PORT = "3000"
