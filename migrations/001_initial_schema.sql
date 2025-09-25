@@ -34,3 +34,21 @@ CREATE INDEX IF NOT EXISTS idx_jobs_created_at ON jobs(created_at);
 CREATE INDEX IF NOT EXISTS idx_sections_job_id ON sections(job_id);
 CREATE INDEX IF NOT EXISTS idx_messages_job_id ON messages(job_id);
 CREATE INDEX IF NOT EXISTS idx_sections_key ON sections(key);
+
+-- Create artifacts table for Stage 2
+CREATE TABLE IF NOT EXISTS artifacts (
+    id TEXT PRIMARY KEY,
+    job_id TEXT NOT NULL,
+    section_key TEXT NOT NULL,
+    title TEXT NOT NULL,
+    artifact_type TEXT NOT NULL, -- 'dataset', 'code', 'figure', 'table', 'link', etc.
+    content TEXT NOT NULL,      -- URL or serialized content
+    description TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (job_id) REFERENCES jobs(id) ON DELETE CASCADE
+);
+
+-- Create indexes for artifacts table
+CREATE INDEX IF NOT EXISTS idx_artifacts_job_id ON artifacts(job_id);
+CREATE INDEX IF NOT EXISTS idx_artifacts_section_key ON artifacts(section_key);
+CREATE INDEX IF NOT EXISTS idx_artifacts_type ON artifacts(artifact_type);

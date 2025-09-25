@@ -1,4 +1,4 @@
-use sqlx::{Pool, Row, Sqlite, PgPool, sqlite::SqlitePool, postgres::PgPool};
+use sqlx::{Pool, Row, Sqlite, sqlite::SqlitePool, postgres::PgPool};
 use crate::models::{Job, NewJob, Section, NewSection, Message, NewMessage};
 use anyhow::Result;
 

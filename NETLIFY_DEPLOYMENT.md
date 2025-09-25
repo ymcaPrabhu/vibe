@@ -1,6 +1,6 @@
 # Netlify Frontend Deployment Guide
 
-This guide helps you deploy the frontend of the Cybersecurity Research App to Netlify.
+This guide helps you deploy the modernized frontend of the Cybersecurity Research App to Netlify.
 
 ## Prerequisites
 

@@ -275,3 +275,4 @@ impl Manager {
             Err(anyhow::anyhow!("Job not found"))
         }
     }
+}

@@ -1,4 +1,5 @@
 mod api;
+mod artifacts;
 mod db;
 mod models;
 mod workers;
@@ -19,6 +20,7 @@ use tower_http::cors::{Any, CorsLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::db::Database;
+use crate::artifacts::ArtifactStore;
 
 use std::collections::HashMap;
 use std::sync::LazyLock;
@@ -68,6 +70,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .route("/api/submit", post(handlers::submit_handler))
         .route("/api/history", get(handlers::history_handler))
         .route("/api/jobs/:job_id/stream", get(handlers::stream_handler))
+        .route("/api/jobs/:job_id/cancel", post(handlers::cancel_handler))
+        .route("/api/jobs/:job_id/resume", post(handlers::resume_handler))
+        .route("/api/jobs/:job_id/status", get(handlers::status_handler))
         .layer(cors)
         .with_state(app_state);
 

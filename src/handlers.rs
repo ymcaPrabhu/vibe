@@ -36,3 +36,30 @@ pub async fn stream_handler(
 ) -> Sse<impl Stream<Item = Result<axum::response::sse::Event, serde_json::Error>>> {
     api_stream_job(State(app_state), Path(job_id)).await
 }
+
+pub async fn cancel_handler(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<crate::models::Job>, (axum::http::StatusCode, String)> {
+    crate::api::cancel_job(State(app_state), Path(job_id))
+        .await
+        .map_err(|e| e)
+}
+
+pub async fn resume_handler(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<crate::models::Job>, (axum::http::StatusCode, String)> {
+    crate::api::resume_job(State(app_state), Path(job_id))
+        .await
+        .map_err(|e| e)
+}
+
+pub async fn status_handler(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<crate::models::Job>, (axum::http::StatusCode, String)> {
+    crate::api::get_job_status(State(app_state), Path(job_id))
+        .await
+        .map_err(|e| e)
+}

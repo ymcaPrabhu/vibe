@@ -46,7 +46,12 @@ pub async fn submit_job(
     }
     
     // Create manager instance
-    let manager = Manager::new(app_state.db.clone(), sse_tx);
+    let manager = match Manager::new(app_state.db.clone(), sse_tx).await {
+        Ok(manager) => manager,
+        Err(e) => {
+            return Err(format!("Failed to create manager: {}", e));
+        }
+    };
     
     // Process the job in the background
     let job_clone = job.clone();
@@ -108,5 +113,95 @@ pub async fn stream_job(
         // If no channel exists, return an empty stream
         let stream = stream::empty();
         Sse::new(stream)
+    }
+}
+
+pub async fn cancel_job(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<Job>, (axum::http::StatusCode, String)> {
+    // Create manager instance to handle cancellation
+    let sse_tx = {
+        let channels = crate::SSE_CHANNELS.read().await;
+        channels.get(&job_id).cloned()
+    };
+    
+    if let Some(sse_tx) = sse_tx {
+        match Manager::new(app_state.db.clone(), sse_tx).await {
+            Ok(manager) => {
+                if let Err(e) = manager.cancel_job(&job_id).await {
+                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()));
+                }
+                
+                match app_state.db.get_job(&job_id).await {
+                    Ok(Some(job)) => Ok(Json(job)),
+                    Ok(None) => Err((axum::http::StatusCode::NOT_FOUND, "Job not found".to_string())),
+                    Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+                }
+            }
+            Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        }
+    } else {
+        Err((axum::http::StatusCode::NOT_FOUND, "Job stream not found".to_string()))
+    }
+}
+
+pub async fn resume_job(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<Job>, (axum::http::StatusCode, String)> {
+    // Create manager instance to handle resumption
+    let sse_tx = {
+        let channels = crate::SSE_CHANNELS.read().await;
+        channels.get(&job_id).cloned()
+    };
+    
+    if let Some(sse_tx) = sse_tx {
+        match Manager::new(app_state.db.clone(), sse_tx).await {
+            Ok(manager) => {
+                if let Err(e) = manager.resume_job(&job_id).await {
+                    return Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()));
+                }
+                
+                match app_state.db.get_job(&job_id).await {
+                    Ok(Some(job)) => Ok(Json(job)),
+                    Ok(None) => Err((axum::http::StatusCode::NOT_FOUND, "Job not found".to_string())),
+                    Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+                }
+            }
+            Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        }
+    } else {
+        Err((axum::http::StatusCode::NOT_FOUND, "Job stream not found".to_string()))
+    }
+}
+
+pub async fn get_job_status(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<Job>, (axum::http::StatusCode, String)> {
+    // Create manager instance to handle status request
+    let sse_tx = {
+        let channels = crate::SSE_CHANNELS.read().await;
+        channels.get(&job_id).cloned()
+    };
+    
+    if let Some(sse_tx) = sse_tx {
+        match Manager::new(app_state.db.clone(), sse_tx).await {
+            Ok(manager) => {
+                match manager.get_job_status(&job_id).await {
+                    Ok(job) => Ok(Json(job)),
+                    Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+                }
+            }
+            Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        }
+    } else {
+        // If we can't get the SSE channel, we can still get job status from DB
+        match app_state.db.get_job(&job_id).await {
+            Ok(Some(job)) => Ok(Json(job)),
+            Ok(None) => Err((axum::http::StatusCode::NOT_FOUND, "Job not found".to_string())),
+            Err(e) => Err((axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
+        }
     }
 }
