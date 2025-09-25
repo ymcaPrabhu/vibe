@@ -44,6 +44,7 @@ class Database {
             job_id TEXT REFERENCES jobs(id),
             title TEXT NOT NULL,
             content TEXT,
+            output_md TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           )`
         ];
@@ -74,6 +75,7 @@ class Database {
             job_id TEXT,
             title TEXT NOT NULL,
             content TEXT,
+            output_md TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (job_id) REFERENCES jobs (id)
           )`
@@ -180,10 +182,10 @@ class Database {
     return new Promise((resolve, reject) => {
       if (this.isPostgres) {
         const query = `
-          INSERT INTO sections (id, job_id, title, content, created_at) 
-          VALUES ($1, $2, $3, $4, $5)
+          INSERT INTO sections (id, job_id, title, content, output_md, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6)
         `;
-        const values = [section.id, section.jobId, section.title, section.content, section.createdAt];
+        const values = [section.id, section.jobId, section.title, section.content, section.output_md, section.createdAt];
         
         this.client.query(query, values, (err, result) => {
           if (err) reject(err);
@@ -191,10 +193,10 @@ class Database {
         });
       } else {
         const query = `
-          INSERT INTO sections (id, job_id, title, content, created_at) 
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO sections (id, job_id, title, content, output_md, created_at)
+          VALUES (?, ?, ?, ?, ?, ?)
         `;
-        const values = [section.id, section.jobId, section.title, section.content, section.createdAt];
+        const values = [section.id, section.jobId, section.title, section.content, section.output_md, section.createdAt];
         
         this.client.run(query, values, function(err) {
           if (err) reject(err);

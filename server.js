@@ -25,6 +25,7 @@ async function initializeApp() {
   try {
     database = new Database(process.env.DATABASE_URL || 'sqlite://dev.db');
     await database.connect();
+    await database.initTables();
     
     jobManager = new JobManager(database, sseChannels);
     
@@ -64,8 +65,8 @@ app.post('/api/submit', async (req, res) => {
     
     // Process the job in the background
     jobManager.processJob(job);
-    
-    res.json(job);
+
+    res.json({ ...job, job_id: job.id });
   } catch (error) {
     console.error('Error submitting job:', error);
     res.status(500).json({ error: 'Failed to submit job' });
@@ -83,7 +84,42 @@ app.get('/api/history', async (req, res) => {
   }
 });
 
-// SSE stream for job updates\napp.get('/api/jobs/:jobId/stream', (req, res) => {\n  const jobId = req.params.jobId;\n  \n  // Check if job exists\n  if (!jobManager || !database) {\n    return res.status(500).json({ error: 'Database not initialized' });\n  }\n  \n  // Set SSE headers\n  res.writeHead(200, {\n    'Content-Type': 'text/event-stream',\n    'Connection': 'keep-alive',\n    'Cache-Control': 'no-cache',\n  });\n\n  // Create or get the SSE channel for this job\n  if (!sseChannels.has(jobId)) {\n    sseChannels.set(jobId, { subscribers: new Set() });\n  }\n  const sseChannel = sseChannels.get(jobId);\n  \n  // Add this client to the subscribers\n  sseChannel.subscribers.add(res);\n  \n  // Send initial connection event\n  res.write(`data: ${JSON.stringify({ kind: 'connected', text: 'Connected to job stream' })}\\n\\n`);\n  \n  // Remove client when connection closes\n  req.on('close', () => {\n    sseChannel.subscribers.delete(res);\n    if (sseChannel.subscribers.size === 0) {\n      sseChannels.delete(jobId); // Clean up if no more subscribers\n    }\n  });\n});
+// SSE stream for job updates
+app.get('/api/jobs/:jobId/stream', (req, res) => {
+  const jobId = req.params.jobId;
+
+  // Check if job exists
+  if (!jobManager || !database) {
+    return res.status(500).json({ error: 'Database not initialized' });
+  }
+
+  // Set SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Connection': 'keep-alive',
+    'Cache-Control': 'no-cache',
+  });
+
+  // Create or get the SSE channel for this job
+  if (!sseChannels.has(jobId)) {
+    sseChannels.set(jobId, { subscribers: new Set() });
+  }
+  const sseChannel = sseChannels.get(jobId);
+
+  // Add this client to the subscribers
+  sseChannel.subscribers.add(res);
+
+  // Send initial connection event
+  res.write(`data: ${JSON.stringify({ kind: 'connected', text: 'Connected to job stream' })}\n\n`);
+
+  // Remove client when connection closes
+  req.on('close', () => {
+    sseChannel.subscribers.delete(res);
+    if (sseChannel.subscribers.size === 0) {
+      sseChannels.delete(jobId); // Clean up if no more subscribers
+    }
+  });
+});
 
 // Cancel a job
 app.post('/api/jobs/:jobId/cancel', async (req, res) => {
