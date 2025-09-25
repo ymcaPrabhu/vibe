@@ -1,8 +1,0 @@
-{
-  "dependencies": {
-    "brew": "^0.0.8",
-    "claude-code": "^0.0.2",
-    "node": "^24.8.0",
-    "railway": "^2.0.17"
-  }
-}
