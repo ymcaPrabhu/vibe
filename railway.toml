@@ -3,13 +3,3 @@ builder = "nixpacks"
 
 [deploy]
 startCommand = "./target/release/cybersecurity-research-app"
-restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 10
-
-[[services]]
-name = "vibe-cybersecurity-app"
-
-[services.variables]
-RUST_LOG = "info"
-LLM_MODEL = "alibaba/tongyi-deepresearch-30b-a3b"
-PORT = "3000"
