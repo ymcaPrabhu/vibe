@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ['rust', 'cargo', 'pkg-config', 'openssl', 'gcc', 'libc6-dev']
+nixPkgs = ['cargo', 'rustc', 'pkg-config', 'openssl']
 
 [phases.build]
 cmds = [
