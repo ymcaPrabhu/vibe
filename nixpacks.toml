@@ -1,11 +1,14 @@
 [phases.setup]
-nixPkgs = ['rust', 'cargo', 'pkg-config', 'openssl']
+nixPkgs = ['rust', 'cargo', 'pkg-config', 'openssl', 'gcc', 'libc6-dev']
 
 [phases.build]
-cmds = ['cargo build --release']
+cmds = [
+  'cargo build --release',
+  'ls -la target/release/'
+]
 
 [phases.start]
-cmd = 'cargo run --release'
+cmd = './target/release/cybersecurity-research-app'
 
 [variables]
 RUST_LOG = 'info'
