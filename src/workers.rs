@@ -1,18 +1,18 @@
-use crate::models::{SectionDraft, Citation, Job};
+#![allow(dead_code)]
+use crate::artifacts::{ArtifactStore, NewArtifact};
 use crate::db::Database;
-use crate::artifacts::{ArtifactStore, NewArtifact, Artifact};
+use crate::models::{Citation, Job, SectionDraft, SseEvent};
 use anyhow::Result;
+use chrono::{DateTime, Utc};
+use scraper::{Html, Selector};
 use std::sync::Arc;
 use tokio::sync::broadcast;
-use chrono::{Utc, DateTime};
 use uuid::Uuid;
-use reqwest;
-use scraper::{Html, Selector};
 
 pub struct Worker {
     db: Arc<Database>,
     artifact_store: Arc<ArtifactStore>,
-    sse_tx: broadcast::Sender<String>,
+    sse_tx: broadcast::Sender<SseEvent>,
     job: Job,
     client: reqwest::Client,
 }
@@ -57,24 +57,33 @@ pub struct EnhancedCitation {
 }
 
 impl Worker {
-    pub fn new(db: Arc<Database>, artifact_store: Arc<ArtifactStore>, sse_tx: broadcast::Sender<String>, job: Job) -> Self {
-        Worker { 
-            db, 
+    pub fn new(
+        db: Arc<Database>,
+        artifact_store: Arc<ArtifactStore>,
+        sse_tx: broadcast::Sender<SseEvent>,
+        job: Job,
+    ) -> Self {
+        Worker {
+            db,
             artifact_store,
-            sse_tx, 
+            sse_tx,
             job,
             client: reqwest::Client::new(),
         }
     }
 
     // Perform constrained web research for a specific topic
-    pub async fn perform_constrained_research(&self, query: &str, max_results: usize) -> Result<Vec<ResearchResult>> {
+    pub async fn perform_constrained_research(
+        &self,
+        query: &str,
+        max_results: usize,
+    ) -> Result<Vec<ResearchResult>> {
         let mut results = Vec::new();
-        
+
         // Define safe domains for research (cybersecurity-focused sources)
         let safe_domains = [
             "arxiv.org",
-            "ieeexplore.ieee.org", 
+            "ieeexplore.ieee.org",
             "dl.acm.org",
             "springer.com",
             "sciencedirect.com",
@@ -83,9 +92,9 @@ impl Worker {
             "owasp.org",
             "sans.org",
             "cisa.gov",
-            "us-cert.cisa.gov"
+            "us-cert.cisa.gov",
         ];
-        
+
         // Create a search query for a search engine API (in practice, you'd use a real API)
         // For now, we'll simulate by searching these specific domains
         for domain in &safe_domains {
@@ -93,93 +102,128 @@ impl Worker {
             // or implement proper web crawling within ethical boundaries
             let search_results = self.search_domain(domain, query).await?;
             results.extend(search_results);
-            
+
             if results.len() >= max_results {
                 break;
             }
         }
-        
+
         Ok(results.into_iter().take(max_results).collect())
     }
-    
+
     // Search a specific domain for relevant content
     async fn search_domain(&self, domain: &str, query: &str) -> Result<Vec<ResearchResult>> {
         let mut results = Vec::new();
-        
+
         // In a real implementation, this would be an API call to the domain
         // For now, we'll simulate results for certain domains
         match domain {
             "arxiv.org" => {
                 // Search arXiv for cybersecurity papers
-                let url = format!(
+                let _url = format!(
                     "https://arxiv.org/search/?query={}&searchtype=all&source=header",
                     query.replace(" ", "+")
                 );
                 // In a real implementation, we would fetch and parse the search results
                 // For now we'll return simulated results
-                if query.to_lowercase().contains("cybersecurity") || 
-                   query.to_lowercase().contains("security") {
+                if query.to_lowercase().contains("cybersecurity")
+                    || query.to_lowercase().contains("security")
+                {
                     results.push(ResearchResult {
                         content: format!("Simulated research content from arXiv about {}", query),
-                        source_url: format!("https://arxiv.org/search/?query={}", query.replace(" ", "+")),
-                        provenance: vec![format!("https://arxiv.org/search/?query={}", query.replace(" ", "+"))],
+                        source_url: format!(
+                            "https://arxiv.org/search/?query={}",
+                            query.replace(" ", "+")
+                        ),
+                        provenance: vec![format!(
+                            "https://arxiv.org/search/?query={}",
+                            query.replace(" ", "+")
+                        )],
                         verification_score: 0.9,
                     });
                 }
-            },
+            }
             "ieeexplore.ieee.org" => {
                 // Search IEEE Xplore for technical papers
-                let url = format!(
+                let _url = format!(
                     "https://ieeexplore.ieee.org/search/searchresult.jsp?newsearch=true&queryText={}",
                     query.replace(" ", "%20")
                 );
-                if query.to_lowercase().contains("cybersecurity") || 
-                   query.to_lowercase().contains("encryption") {
+                if query.to_lowercase().contains("cybersecurity")
+                    || query.to_lowercase().contains("encryption")
+                {
                     results.push(ResearchResult {
-                        content: format!("Simulated research content from IEEE Xplore about {}", query),
-                        source_url: format!("https://ieeexplore.ieee.org/search/?query={}", query.replace(" ", "%20")),
-                        provenance: vec![format!("https://ieeexplore.ieee.org/search/?query={}", query.replace(" ", "%20"))],
+                        content: format!(
+                            "Simulated research content from IEEE Xplore about {}",
+                            query
+                        ),
+                        source_url: format!(
+                            "https://ieeexplore.ieee.org/search/?query={}",
+                            query.replace(" ", "%20")
+                        ),
+                        provenance: vec![format!(
+                            "https://ieeexplore.ieee.org/search/?query={}",
+                            query.replace(" ", "%20")
+                        )],
                         verification_score: 0.85,
                     });
                 }
-            },
+            }
             "nvd.nist.gov" => {
                 // Search NVD for vulnerabilities related to the topic
-                let url = format!(
+                let _url = format!(
                     "https://nvd.nist.gov/vuln/search/results?form_type=Basic&results_type=overview&query={}",
                     query.replace(" ", "%20")
                 );
-                if query.to_lowercase().contains("vulnerability") || 
-                   query.to_lowercase().contains("cve") {
+                if query.to_lowercase().contains("vulnerability")
+                    || query.to_lowercase().contains("cve")
+                {
                     results.push(ResearchResult {
-                        content: format!("Simulated vulnerability research from NVD about {}", query),
-                        source_url: format!("https://nvd.nist.gov/vuln/search/results?query={}", query.replace(" ", "%20")),
-                        provenance: vec![format!("https://nvd.nist.gov/vuln/search/results?query={}", query.replace(" ", "%20"))],
+                        content: format!(
+                            "Simulated vulnerability research from NVD about {}",
+                            query
+                        ),
+                        source_url: format!(
+                            "https://nvd.nist.gov/vuln/search/results?query={}",
+                            query.replace(" ", "%20")
+                        ),
+                        provenance: vec![format!(
+                            "https://nvd.nist.gov/vuln/search/results?query={}",
+                            query.replace(" ", "%20")
+                        )],
                         verification_score: 0.95,
                     });
                 }
-            },
+            }
             _ => {
                 // For other domains, we'd implement similar patterns
                 // In this simplified version, we'll just add placeholder results
                 results.push(ResearchResult {
                     content: format!("Simulated research content from {} about {}", domain, query),
-                    source_url: format!("https://{}/search?q={}", domain, query.replace(" ", "%20")),
-                    provenance: vec![format!("https://{}/search?q={}", domain, query.replace(" ", "%20"))],
+                    source_url: format!(
+                        "https://{}/search?q={}",
+                        domain,
+                        query.replace(" ", "%20")
+                    ),
+                    provenance: vec![format!(
+                        "https://{}/search?q={}",
+                        domain,
+                        query.replace(" ", "%20")
+                    )],
                     verification_score: 0.7,
                 });
             }
         }
-        
+
         Ok(results)
     }
-    
+
     // Fetch and parse content from a given URL
     pub async fn fetch_content_from_url(&self, url: &str) -> Result<String> {
         // Perform basic validation to ensure the URL is from a safe domain
         let allowed_domains = [
             "arxiv.org",
-            "ieeexplore.ieee.org", 
+            "ieeexplore.ieee.org",
             "dl.acm.org",
             "springer.com",
             "sciencedirect.com",
@@ -188,38 +232,38 @@ impl Worker {
             "owasp.org",
             "sans.org",
             "cisa.gov",
-            "us-cert.cisa.gov"
+            "us-cert.cisa.gov",
         ];
-        
+
         let is_allowed = allowed_domains.iter().any(|&domain| url.contains(domain));
         if !is_allowed {
             return Err(anyhow::anyhow!("URL from non-approved domain: {}", url));
         }
-        
+
         let response = self.client.get(url).send().await?;
         if !response.status().is_success() {
             return Err(anyhow::anyhow!("Failed to fetch content from URL: {}", url));
         }
-        
+
         let body = response.text().await?;
-        
+
         // Parse the HTML and extract text content
         let document = Html::parse_document(&body);
         let text_selector = Selector::parse("p, h1, h2, h3, h4, h5, h6, li, td, div").unwrap();
-        
+
         let text_content: Vec<String> = document
             .select(&text_selector)
             .map(|element| element.text().collect::<String>().trim().to_string())
             .filter(|text| !text.is_empty())
             .collect();
-        
+
         Ok(text_content.join(" "))
     }
-    
+
     // Verify a citation's authenticity
     pub async fn verify_citation(&self, citation: &EnhancedCitation) -> Result<EnhancedCitation> {
         let mut verified_citation = citation.clone();
-        
+
         // Check if the URL is accessible and valid
         match self.client.head(&citation.url).send().await {
             Ok(response) => {
@@ -234,14 +278,18 @@ impl Worker {
                 verified_citation.verification_status = "unverified".to_string();
             }
         }
-        
+
         Ok(verified_citation)
     }
-    
+
     // Verify that a claim is supported by sources
-    pub async fn verify_claim(&self, claim: &str, sources: &[String]) -> Result<(bool, Vec<String>)> {
+    pub async fn verify_claim(
+        &self,
+        claim: &str,
+        sources: &[String],
+    ) -> Result<(bool, Vec<String>)> {
         let mut supporting_evidence = Vec::new();
-        
+
         for source_url in sources {
             match self.fetch_content_from_url(source_url).await {
                 Ok(content) => {
@@ -256,24 +304,68 @@ impl Worker {
                 }
             }
         }
-        
+
         Ok((!supporting_evidence.is_empty(), supporting_evidence))
     }
 
-    pub async fn process_section(&self, section_key: &str, section_title: &str, topic: &str, depth: i32) -> Result<SectionDraft> {
-        let content = self.generate_section_content(section_key, section_title, topic, depth).await?;
-        let citations = self.generate_citations(section_key, topic).await?;
-        
-        // For Stage 2, we enhance the citations with proper verification
-        let enhanced_citations = self.enhance_citations_with_research(&citations, topic).await?;
-        
-        // Generate artifacts for this section
-        self.generate_artifacts(section_key, section_title, topic, depth).await?;
+    pub async fn process_section(
+        &self,
+        section_key: &str,
+        section_title: &str,
+        topic: &str,
+        depth: i32,
+    ) -> Result<SectionDraft> {
+        // Send progress update - 25%
+        self.send_progress_update(section_key, section_title, 25).await;
 
-        Ok(SectionDraft { content, citations: self.convert_to_standard_citations(enhanced_citations)? })
+        let content = self
+            .generate_section_content(section_key, section_title, topic, depth)
+            .await?;
+
+        // Send progress update - 50%
+        self.send_progress_update(section_key, section_title, 50).await;
+
+        let citations = self.generate_citations(section_key, topic).await?;
+
+        // Send progress update - 75%
+        self.send_progress_update(section_key, section_title, 75).await;
+
+        // For Stage 2, we enhance the citations with proper verification
+        let enhanced_citations = self
+            .enhance_citations_with_research(&citations, topic)
+            .await?;
+
+        // Generate artifacts for this section
+        self.generate_artifacts(section_key, section_title, topic, depth)
+            .await?;
+
+        // Send progress update - 100%
+        self.send_progress_update(section_key, section_title, 100).await;
+
+        Ok(SectionDraft {
+            content,
+            citations: self.convert_to_standard_citations(enhanced_citations)?,
+        })
     }
 
-    async fn generate_section_content(&self, section_key: &str, section_title: &str, topic: &str, depth: i32) -> Result<String> {
+    async fn send_progress_update(&self, section_key: &str, section_title: &str, progress: i32) {
+        let progress_event = SseEvent {
+            kind: "worker_progress".to_string(),
+            text: None,
+            section_key: Some(section_key.to_string()),
+            section_title: Some(section_title.to_string()),
+            progress: Some(progress),
+        };
+        let _ = self.sse_tx.send(progress_event);
+    }
+
+    async fn generate_section_content(
+        &self,
+        section_key: &str,
+        section_title: &str,
+        topic: &str,
+        depth: i32,
+    ) -> Result<String> {
         // Build a prompt specific to this section
         let prompt = match section_key {
             "executive_summary" => {
@@ -289,7 +381,10 @@ impl Worker {
                 )
             }
             key if key.starts_with("topic_chapter_") => {
-                let chapter_num = key.trim_start_matches("topic_chapter_").parse::<i32>().unwrap_or(1);
+                let chapter_num = key
+                    .trim_start_matches("topic_chapter_")
+                    .parse::<i32>()
+                    .unwrap_or(1);
                 format!(
                     "Write a detailed section about aspect {} of '{}' in a research report. Focus on technical aspects, challenges, and current state of the field. Use formal Government of India writing style and include specific examples where relevant. The research depth is {} out of 5.",
                     chapter_num, topic, depth
@@ -321,16 +416,16 @@ impl Worker {
         // Send progress updates
         for progress in (0..=100).step_by(25) {
             // Send progress update
-            let progress_event = serde_json::to_string(&crate::models::SseEvent {
+            let progress_event = crate::models::SseEvent {
                 kind: "progress".to_string(),
                 text: None,
                 section_key: Some(section_key.to_string()),
                 section_title: Some(section_title.to_string()),
                 progress: Some(progress),
-            }).unwrap_or_default();
-            
+            };
+
             let _ = self.sse_tx.send(progress_event);
-            
+
             // Simulate processing time during generation
             tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
         }
@@ -341,7 +436,7 @@ impl Worker {
     async fn call_openrouter_api(&self, prompt: &str) -> Result<String> {
         let api_key = std::env::var("OPENROUTER_API_KEY")
             .map_err(|_| anyhow::anyhow!("OPENROUTER_API_KEY environment variable not set"))?;
-        
+
         let model = std::env::var("LLM_MODEL")
             .unwrap_or_else(|_| "alibaba/tongyi-deepresearch-30b-a3b".to_string());
 
@@ -357,7 +452,8 @@ impl Worker {
             "max_tokens": 2000
         });
 
-        let response = self.client
+        let response = self
+            .client
             .post("https://openrouter.ai/api/v1/chat/completions")
             .header("Authorization", format!("Bearer {}", api_key))
             .header("Content-Type", "application/json")
@@ -371,7 +467,7 @@ impl Worker {
         }
 
         let response_json: serde_json::Value = response.json().await?;
-        
+
         if let Some(choices) = response_json["choices"].as_array() {
             if let Some(first_choice) = choices.first() {
                 if let Some(content) = first_choice["message"]["content"].as_str() {
@@ -387,7 +483,7 @@ impl Worker {
         // For Stage 1, we'll generate placeholder citations
         // In Stage 2, this would connect to real citation databases
         let mut citations = Vec::new();
-        
+
         // Generate different types of citations based on section
         match section_key {
             "executive_summary" => {
@@ -404,7 +500,8 @@ impl Worker {
             "introduction" => {
                 citations.push(Citation {
                     doi: Some("10.1007/978-3-030-89511-3_5".to_string()),
-                    url: "https://link.springer.com/chapter/10.1007/978-3-030-89511-3_5".to_string(),
+                    url: "https://link.springer.com/chapter/10.1007/978-3-030-89511-3_5"
+                        .to_string(),
                     title: format!("Introduction to {} Concepts", topic),
                     publisher: "Springer".to_string(),
                     year: 2024,
@@ -422,7 +519,7 @@ impl Worker {
                     access_date: Utc::now(),
                     page_section: Some("Section 4.2".to_string()),
                 });
-                
+
                 citations.push(Citation {
                     doi: Some("10.1145/3576915.3576923".to_string()),
                     url: "https://dl.acm.org/doi/10.1145/3576915.3576923".to_string(),
@@ -437,7 +534,7 @@ impl Worker {
                 citations.push(Citation {
                     doi: Some("10.1007/s10207-023-00748-y".to_string()),
                     url: "https://link.springer.com/article/10.1007/s10207-023-00748-y".to_string(),
-                    title: "Security Standard Mappings and Compliance Frameworks",
+                    title: "Security Standard Mappings and Compliance Frameworks".to_string(),
                     publisher: "Springer".to_string(),
                     year: 2024,
                     access_date: Utc::now(),
@@ -449,7 +546,8 @@ impl Worker {
                 citations.push(Citation {
                     doi: Some("10.1145/3581531".to_string()),
                     url: "https://dl.acm.org/doi/10.1145/3581531".to_string(),
-                    title: "A Comprehensive Survey of Cybersecurity Research Methodologies",
+                    title: "A Comprehensive Survey of Cybersecurity Research Methodologies"
+                        .to_string(),
                     publisher: "ACM".to_string(),
                     year: 2024,
                     access_date: Utc::now(),
@@ -472,9 +570,13 @@ impl Worker {
         Ok(citations)
     }
 
-    async fn enhance_citations_with_research(&self, citations: &[Citation], topic: &str) -> Result<Vec<EnhancedCitation>> {
+    async fn enhance_citations_with_research(
+        &self,
+        citations: &[Citation],
+        _topic: &str,
+    ) -> Result<Vec<EnhancedCitation>> {
         let mut enhanced_citations = Vec::new();
-        
+
         for citation in citations {
             // Convert standard citation to enhanced citation
             let enhanced = EnhancedCitation {
@@ -489,19 +591,22 @@ impl Worker {
                 verification_status: "unverified".to_string(), // Will be updated after verification
                 claim_support_level: "unknown".to_string(),
             };
-            
+
             // Verify the citation
             let verified_citation = self.verify_citation(&enhanced).await?;
             enhanced_citations.push(verified_citation);
         }
-        
+
         Ok(enhanced_citations)
     }
-    
+
     // Convert EnhancedCitation to standard Citation
-    fn convert_to_standard_citations(&self, enhanced_citations: Vec<EnhancedCitation>) -> Result<Vec<Citation>> {
+    fn convert_to_standard_citations(
+        &self,
+        enhanced_citations: Vec<EnhancedCitation>,
+    ) -> Result<Vec<Citation>> {
         let mut citations = Vec::new();
-        
+
         for enhanced in enhanced_citations {
             citations.push(Citation {
                 doi: enhanced.doi,
@@ -513,15 +618,21 @@ impl Worker {
                 page_section: enhanced.page_section,
             });
         }
-        
+
         Ok(citations)
     }
-    
+
     // Generate artifacts for a section
-    async fn generate_artifacts(&self, section_key: &str, section_title: &str, topic: &str, depth: i32) -> Result<()> {
+    async fn generate_artifacts(
+        &self,
+        section_key: &str,
+        section_title: &str,
+        topic: &str,
+        _depth: i32,
+    ) -> Result<()> {
         // Generate different types of artifacts based on section
         let mut artifacts = Vec::new();
-        
+
         match section_key {
             "executive_summary" => {
                 // Generate summary artifacts (charts, figures)
@@ -531,7 +642,10 @@ impl Worker {
                     section_key: section_key.to_string(),
                     title: format!("Executive Summary - {}", topic),
                     artifact_type: "summary".to_string(),
-                    content: format!("Executive summary with key findings and recommendations for {}", topic),
+                    content: format!(
+                        "Executive summary with key findings and recommendations for {}",
+                        topic
+                    ),
                     description: "Executive summary highlighting main points".to_string(),
                     created_at: Utc::now(),
                 });
@@ -551,7 +665,10 @@ impl Worker {
             }
             key if key.starts_with("topic_chapter_") => {
                 // Generate technical artifacts (code snippets, data sets, analysis)
-                let chapter_num = key.trim_start_matches("topic_chapter_").parse::<i32>().unwrap_or(1);
+                let chapter_num = key
+                    .trim_start_matches("topic_chapter_")
+                    .parse::<i32>()
+                    .unwrap_or(1);
                 artifacts.push(NewArtifact {
                     id: Uuid::new_v4().to_string(),
                     job_id: self.job.id.clone(),
@@ -559,10 +676,11 @@ impl Worker {
                     title: format!("Technical Analysis - Chapter {}", chapter_num),
                     artifact_type: "analysis".to_string(),
                     content: format!("Technical analysis of aspect {} of {}", chapter_num, topic),
-                    description: format!("In-depth analysis of chapter {} topic", chapter_num).to_string(),
+                    description: format!("In-depth analysis of chapter {} topic", chapter_num)
+                        .to_string(),
                     created_at: Utc::now(),
                 });
-                
+
                 // Add code/data artifacts if relevant
                 artifacts.push(NewArtifact {
                     id: Uuid::new_v4().to_string(),
@@ -570,7 +688,10 @@ impl Worker {
                     section_key: section_key.to_string(),
                     title: format!("Code Snippets - Chapter {}", chapter_num),
                     artifact_type: "code".to_string(),
-                    content: format!("Relevant code samples for {} in chapter {}", topic, chapter_num),
+                    content: format!(
+                        "Relevant code samples for {} in chapter {}",
+                        topic, chapter_num
+                    ),
                     description: "Code examples related to the technical content".to_string(),
                     created_at: Utc::now(),
                 });
@@ -581,18 +702,19 @@ impl Worker {
                     id: Uuid::new_v4().to_string(),
                     job_id: self.job.id.clone(),
                     section_key: section_key.to_string(),
-                    title: "Security Standard Mappings",
+                    title: "Security Standard Mappings".to_string(),
                     artifact_type: "mapping".to_string(),
-                    content: "Mappings between different security standards and frameworks".to_string(),
+                    content: "Mappings between different security standards and frameworks"
+                        .to_string(),
                     description: "Cross-reference table of security standards".to_string(),
                     created_at: Utc::now(),
                 });
-                
+
                 artifacts.push(NewArtifact {
                     id: Uuid::new_v4().to_string(),
                     job_id: self.job.id.clone(),
                     section_key: section_key.to_string(),
-                    title: "Glossary of Terms",
+                    title: "Glossary of Terms".to_string(),
                     artifact_type: "glossary".to_string(),
                     content: "Comprehensive glossary of cybersecurity terms".to_string(),
                     description: "Definition of terms used throughout the report".to_string(),
@@ -605,7 +727,7 @@ impl Worker {
                     id: Uuid::new_v4().to_string(),
                     job_id: self.job.id.clone(),
                     section_key: section_key.to_string(),
-                    title: "Complete Bibliography",
+                    title: "Complete Bibliography".to_string(),
                     artifact_type: "bibliography".to_string(),
                     content: format!("Complete list of {} references", topic),
                     description: "Full bibliography in IEEE format".to_string(),
@@ -626,19 +748,19 @@ impl Worker {
                 });
             }
         }
-        
+
         // Save all artifacts to the database
         for artifact in artifacts {
             self.artifact_store.create_artifact(artifact).await?;
         }
-        
+
         Ok(())
     }
 
     // Function to verify citations using lightweight methods
     pub async fn verify_citations(&self, citations: Vec<Citation>) -> Result<Vec<Citation>> {
         let mut verified_citations = Vec::new();
-        
+
         for mut citation in citations {
             // In a real implementation, we would verify each citation
             // For Stage 1, we'll simply mark them as verified after checking if the URL is valid
@@ -650,7 +772,7 @@ impl Worker {
                 verified_citations.push(citation);
             }
         }
-        
+
         Ok(verified_citations)
     }
 

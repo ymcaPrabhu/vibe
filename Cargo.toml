@@ -3,6 +3,14 @@ name = "cybersecurity-research-app"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "cybersecurity-research-app"
+path = "src/main.rs"
+
+[lib]
+name = "cybersecurity_research_app"
+path = "src/lib.rs"
+
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }
 axum = { version = "0.7", features = ["ws"] }
@@ -17,8 +25,9 @@ anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 tower = "0.4"
-tower-http = { version = "0.5", features = ["cors"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
 dotenv = "0.15"
 futures = "0.3"
-tokio-stream = "0.1"
+tokio-stream = { version = "0.1", features = ["sync"] }
 scraper = "0.17"
+lazy_static = "1.4"

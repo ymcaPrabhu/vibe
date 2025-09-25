@@ -1,155 +1,253 @@
+// ChatGPT-Style Interface JavaScript
+
 document.addEventListener('DOMContentLoaded', function() {
     // DOM elements
+    const sidebar = document.getElementById('sidebar');
+    const mobileSidebar = document.getElementById('mobile-sidebar');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarClose = document.getElementById('sidebar-close');
+    const newChatBtn = document.getElementById('new-chat-btn');
+    const newChatMobile = document.getElementById('new-chat-mobile');
+    const clearChatBtn = document.getElementById('clear-chat-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+
+    // Form elements
     const researchForm = document.getElementById('research-form');
     const topicInput = document.getElementById('topic');
     const depthInput = document.getElementById('depth');
-    const depthSlider = document.getElementById('depth-slider');
+    const depthText = document.getElementById('depth-text');
+    const depthBtn = document.getElementById('depth-btn');
     const submitBtn = document.getElementById('submit-btn');
-    const progressContainer = document.getElementById('progress-container');
-    const overallProgressFill = document.querySelector('#progress-container .progress-fill');
-    const overallProgressText = document.querySelector('#progress-container .progress-text');
+
+    // Progress elements
+    const progressIndicator = document.getElementById('progress-indicator');
+    const overallProgressFill = document.getElementById('overall-progress-fill');
+    const overallProgressText = document.getElementById('overall-progress-text');
     const workersContainer = document.getElementById('workers-container');
-    const resultsContent = document.getElementById('results-content');
-    const toggleHistoryBtn = document.getElementById('toggle-history');
-    const historyPanel = document.getElementById('history-panel');
-    const jobHistoryList = document.getElementById('job-history');
-    const depthLabels = document.querySelectorAll('.depth-label');
+
+    // Chat elements
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const chatMessages = document.getElementById('chat-messages');
+    const statusToast = document.getElementById('status-toast-element');
+    const statusToastBody = document.getElementById('toast-body');
+    const statusToastIcon = document.getElementById('toast-icon');
+
+    // History elements
+    const jobHistory = document.getElementById('job-history');
+    const jobHistoryMobile = document.getElementById('job-history-mobile');
     const searchHistory = document.getElementById('search-history');
+    const searchHistoryMobile = document.getElementById('search-history-mobile');
     const activeResearchCount = document.getElementById('active-research');
     const totalReportsCount = document.getElementById('total-reports');
-    
-    // Export buttons
-    const exportPdfBtn = document.getElementById('export-pdf');
-    const exportWordBtn = document.getElementById('export-word');
-    const exportMdBtn = document.getElementById('export-markdown');
-    
-    // State
+
+    // Depth selector elements
+    const depthOptions = document.querySelectorAll('.depth-option');
+
+    // Modal elements
+    const exportModal = new bootstrap.Modal(document.getElementById('exportModal'));
+    const settingsModal = new bootstrap.Modal(document.getElementById('settingsModal'));
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const toast = new bootstrap.Toast(statusToast);
+
+    // State management
     let currentJobId = null;
     let eventSource = null;
-    let workerProgress = {};
-    let workerTitles = {};
-    let jobHistory = [];
-    
-    // Set focus on topic input
-    topicInput.focus();
-    
-    // Initialize depth slider
-    updateDepthSlider();
-    
-    // Set up depth slider event listeners
-    depthSlider.addEventListener('input', updateDepthSlider);
-    
-    // Set up depth label event listeners
-    depthLabels.forEach(label => {
-        label.addEventListener('click', function() {
-            const value = parseInt(this.getAttribute('data-value'));
-            depthSlider.value = value;
-            depthInput.value = value;
-            updateDepthSlider();
-        });
-    });
-    
-    // Function to update the slider and associated labels
-    function updateDepthSlider() {
-        const value = depthSlider.value;
-        depthInput.value = value;
-        
-        // Update active label
-        depthLabels.forEach(label => {
-            if (parseInt(label.getAttribute('data-value')) == value) {
-                label.classList.add('active');
-            } else {
-                label.classList.remove('active');
-            }
+    let workerProgress = new Map();
+    let jobHistoryData = [];
+    let pinnedWorkers = new Set();
+    let settings = {
+        theme: 'light',
+        autoScroll: true
+    };
+
+    // Initialize application
+    init();
+
+    function init() {
+        initializeEventListeners();
+        initializeDepthSelector();
+        loadJobHistory();
+        loadSettings();
+        focusInput();
+        updateStats();
+        autoResizeTextarea();
+
+        // Initialize tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     }
-    
-    // Toggle history panel
-    toggleHistoryBtn.addEventListener('click', function() {
-        const spanText = this.querySelector('span');
-        const icon = this.querySelector('i');
-        
-        if (historyPanel.style.display === 'none' || historyPanel.style.display === '') {
-            historyPanel.style.display = 'flex';
-            spanText.textContent = 'Hide';
-            icon.className = 'fas fa-eye-slash';
-        } else {
-            historyPanel.style.display = 'none';
-            spanText.textContent = 'Show';
-            icon.className = 'fas fa-eye';
+
+    function initializeEventListeners() {
+        // Sidebar controls
+        sidebarToggle?.addEventListener('click', toggleMobileSidebar);
+        sidebarClose?.addEventListener('click', closeMobileSidebar);
+        sidebarOverlay?.addEventListener('click', closeMobileSidebar);
+        newChatBtn?.addEventListener('click', startNewChat);
+        newChatMobile?.addEventListener('click', startNewChat);
+        clearChatBtn?.addEventListener('click', clearCurrentChat);
+
+        // Form submission
+        researchForm?.addEventListener('submit', handleSubmit);
+        topicInput?.addEventListener('input', autoResizeTextarea);
+        topicInput?.addEventListener('keydown', handleTextareaKeydown);
+
+        // Settings and export
+        exportBtn?.addEventListener('click', () => exportModal.show());
+        settingsBtn?.addEventListener('click', () => settingsModal.show());
+
+        // History search
+        searchHistory?.addEventListener('input', filterHistory);
+        searchHistoryMobile?.addEventListener('input', filterHistory);
+
+        // Depth selector
+        depthOptions.forEach(option => {
+            option.addEventListener('click', handleDepthSelection);
+        });
+
+        // Example prompts
+        const exampleCards = document.querySelectorAll('.example-card');
+        exampleCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const text = card.querySelector('.card-text').textContent.replace(/[""]/g, '');
+                topicInput.value = text;
+                focusInput();
+                autoResizeTextarea();
+            });
+        });
+
+        // Responsive handling
+        window.addEventListener('resize', handleResize);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', handleKeyboard);
+
+        // Export buttons
+        document.getElementById('export-pdf')?.addEventListener('click', () => exportResults('pdf'));
+        document.getElementById('export-word')?.addEventListener('click', () => exportResults('word'));
+        document.getElementById('export-markdown')?.addEventListener('click', () => exportResults('markdown'));
+
+        // Settings
+        document.getElementById('save-settings')?.addEventListener('click', saveSettings);
+
+        // Theme toggle (if present)
+        const themeSelect = document.getElementById('theme-select');
+        if (themeSelect) {
+            themeSelect.addEventListener('change', applyTheme);
         }
-    });
-    
-    // Search history functionality
-    searchHistory.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        filterHistory(searchTerm);
-    });
-    
-    // Function to filter history based on search term
-    function filterHistory(searchTerm) {
-        const filteredJobs = jobHistory.filter(job => 
-            job.topic.toLowerCase().includes(searchTerm) ||
-            job.status.toLowerCase().includes(searchTerm)
-        );
-        
-        renderJobHistory(filteredJobs);
     }
-    
-    // Export functionality - placeholder for now
-    exportPdfBtn.addEventListener('click', function() {
-        alert('PDF export functionality would be implemented here');
-    });
-    
-    exportWordBtn.addEventListener('click', function() {
-        alert('Word export functionality would be implemented here');
-    });
-    
-    exportMdBtn.addEventListener('click', function() {
-        const markdownContent = resultsContent.innerText || resultsContent.textContent;
-        const blob = new Blob([markdownContent], { type: 'text/markdown' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'research-report.md';
-        a.click();
-        window.URL.revokeObjectURL(url);
-    });
-    
-    // Submit research request
-    researchForm.addEventListener('submit', async function(e) {
+
+    function initializeDepthSelector() {
+        const defaultDepth = depthInput?.value || '2';
+        const defaultOption = document.querySelector(`.depth-option[data-value="${defaultDepth}"]`);
+        if (defaultOption) {
+            setActiveDepthOption(defaultOption);
+        }
+    }
+
+    function handleDepthSelection(e) {
         e.preventDefault();
-        
-        const topic = topicInput.value.trim();
-        const depth = parseInt(depthInput.value);
-        
+        const option = e.currentTarget;
+        const value = option.getAttribute('data-value');
+        const text = option.textContent.trim();
+
+        if (depthInput) depthInput.value = value;
+        if (depthText) depthText.textContent = text;
+        setActiveDepthOption(option);
+    }
+
+    function setActiveDepthOption(activeOption) {
+        depthOptions.forEach(opt => opt.classList.remove('active'));
+        activeOption.classList.add('active');
+    }
+
+    // Mobile sidebar functions
+    function toggleMobileSidebar() {
+        if (mobileSidebar?.classList.contains('show')) {
+            closeMobileSidebar();
+        } else {
+            openMobileSidebar();
+        }
+    }
+
+    function openMobileSidebar() {
+        mobileSidebar?.classList.add('show');
+        sidebarOverlay?.classList.add('show');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeMobileSidebar() {
+        mobileSidebar?.classList.remove('show');
+        sidebarOverlay?.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+
+    function handleResize() {
+        // Auto-close mobile sidebar on desktop
+        if (window.innerWidth >= 992) {
+            closeMobileSidebar();
+        }
+    }
+
+    function handleKeyboard(e) {
+        // Escape key closes mobile sidebar
+        if (e.key === 'Escape') {
+            closeMobileSidebar();
+        }
+
+        // Ctrl/Cmd + K to focus input
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            focusInput();
+        }
+
+        // Ctrl/Cmd + N for new chat
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+            e.preventDefault();
+            startNewChat();
+        }
+    }
+
+    function handleTextareaKeydown(e) {
+        // Submit on Enter (but not Shift+Enter)
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            researchForm?.dispatchEvent(new Event('submit'));
+        }
+    }
+
+    function autoResizeTextarea() {
+        if (!topicInput) return;
+
+        topicInput.style.height = 'auto';
+        const maxHeight = 200;
+        const newHeight = Math.min(topicInput.scrollHeight, maxHeight);
+        topicInput.style.height = newHeight + 'px';
+        topicInput.style.overflowY = newHeight >= maxHeight ? 'auto' : 'hidden';
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+
+        const topic = topicInput?.value?.trim();
+        const depth = parseInt(depthInput?.value || '2');
+
         if (!topic) {
-            alert('Please enter a research topic');
+            focusInput();
+            showToast('Please enter a research topic', 'warning');
             return;
         }
-        
-        if (depth < 1 || depth > 5) {
-            alert('Depth must be between 1 and 5');
-            return;
-        }
-        
-        // Update active research counter
-        activeResearchCount.textContent = '1 Active';
-        
-        // Disable form and show progress
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Researching...</span>';
-        progressContainer.style.display = 'block';
-        workersContainer.innerHTML = '';
-        
-        // Clear welcome message if present
-        const welcomeMessage = resultsContent.querySelector('.welcome-message');
-        if (welcomeMessage) {
-            welcomeMessage.remove();
-        }
-        
+
         try {
-            // Submit the job
+            setLoadingState(true);
+            hideWelcomeScreen();
+            showProgressIndicator();
+            addUserMessage(topic);
+
+            // Submit research job
             const response = await fetch('/api/submit', {
                 method: 'POST',
                 headers: {
@@ -157,238 +255,697 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({ topic, depth })
             });
-            
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            
-            const job = await response.json();
-            currentJobId = job.id;
-            
-            // Start listening for updates
+
+            const data = await response.json();
+            currentJobId = data.job_id;
+
+            // Start SSE connection
             startEventSource(currentJobId);
+
+            // Clear input and add to history
+            topicInput.value = '';
+            autoResizeTextarea();
+            addToHistory(currentJobId, topic, 'submitted', depth);
+
+            // Close mobile sidebar if open
+            closeMobileSidebar();
+
+            showToast('Research started successfully', 'success');
+
         } catch (error) {
-            console.error('Error submitting job:', error);
-            alert('Error submitting research request: ' + error.message);
-            resetForm();
+            console.error('Research submission failed:', error);
+            showToast('Failed to submit research request. Please try again.', 'error');
+            setLoadingState(false);
         }
-    });
-    
-    // Start SSE connection
+    }
+
     function startEventSource(jobId) {
-        if (eventSource) {
-            eventSource.close();
-        }
-        
+        closeEventSource();
+
         eventSource = new EventSource(`/api/jobs/${jobId}/stream`);
-        
-        eventSource.onmessage = function(event) {
+
+        eventSource.onopen = () => {
+            console.log('SSE connection opened');
+            showToast('Connected to research stream', 'info');
+        };
+
+        eventSource.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                
-                if (data.kind === 'chunk') {
-                    // Add content to the results
-                    addContentToResults(data);
-                } else if (data.kind === 'progress') {
-                    // Update progress bar for the specific worker
-                    updateWorkerProgress(data);
-                } else if (data.kind === 'done') {
-                    // Research is complete
-                    eventSource.close();
-                    eventSource = null;
-                    resetForm();
-                    loadJobHistory();
-                    
-                    // Update counters
-                    activeResearchCount.textContent = '0 Active';
-                    // In a real app, we would increment the total reports counter
-                }
+                handleSSEMessage(data);
             } catch (error) {
-                console.error('Error processing event:', error);
+                console.error('Failed to parse SSE data:', error);
             }
         };
-        
-        eventSource.onerror = function(error) {
-            console.error('SSE error:', error);
+
+        eventSource.onerror = (error) => {
+            console.error('SSE connection error:', error);
+            if (eventSource.readyState === EventSource.CLOSED) {
+                showToast('Connection lost', 'error');
+                setLoadingState(false);
+            }
+        };
+    }
+
+    function handleSSEMessage(data) {
+        // Map the backend 'kind' field to frontend 'type' field for consistency
+        const eventType = data.kind || data.type;
+
+        switch (eventType) {
+            case 'outline':
+                handleOutlineMessage(data);
+                break;
+            case 'worker_start':
+                handleWorkerStart(data);
+                break;
+            case 'worker_progress':
+                handleWorkerProgress(data);
+                break;
+            case 'worker_complete':
+                handleWorkerComplete(data);
+                break;
+            case 'content':
+                handleContentMessage(data);
+                break;
+            case 'job_complete':
+                handleJobComplete(data);
+                break;
+            case 'error':
+                handleErrorMessage(data);
+                break;
+            default:
+                console.log('Unknown SSE event type:', eventType, data);
+        }
+    }
+
+    function handleOutlineMessage(data) {
+        const outlineText = data.text || "Research outline generated successfully";
+        addAssistantMessage("Research Outline", outlineText);
+        updateOverallProgress(10);
+    }
+
+    function handleWorkerStart(data) {
+        const workerId = data.section_key;
+        const title = data.section_title || `Section ${workerId}`;
+
+        if (workerId) {
+            workerProgress.set(workerId, {
+                title,
+                progress: 0,
+                status: 'processing',
+                content: ''
+            });
+
+            updateWorkerDisplay();
+        }
+    }
+
+    function handleWorkerProgress(data) {
+        const workerId = data.section_key;
+        const progress = Math.min(Math.max(data.progress || 0, 0), 100);
+
+        if (workerId && workerProgress.has(workerId)) {
+            const worker = workerProgress.get(workerId);
+            worker.progress = progress;
+            worker.status = progress === 100 ? 'complete' : 'processing';
+
+            updateWorkerDisplay();
+            updateOverallProgress();
+        }
+    }
+
+    function handleWorkerComplete(data) {
+        const workerId = data.section_key;
+
+        if (workerId && workerProgress.has(workerId)) {
+            const worker = workerProgress.get(workerId);
+            worker.progress = 100;
+            worker.status = 'complete';
+            worker.content = data.text || '';
+
+            updateWorkerDisplay();
+            updateOverallProgress();
+        }
+    }
+
+    function handleContentMessage(data) {
+        if (data.text) {
+            addAssistantMessage(data.section_title || "Research Section", data.text);
+        }
+    }
+
+    function handleJobComplete(data) {
+        showToast('Research completed successfully', 'success');
+        updateOverallProgress(100);
+        setLoadingState(false);
+        hideProgressIndicator();
+
+        // Update history
+        updateHistoryStatus(currentJobId, 'complete');
+        closeEventSource();
+
+        if (data.full_report) {
+            addAssistantMessage("Research Complete", data.full_report);
+        }
+    }
+
+    function handleErrorMessage(data) {
+        const message = data.message || 'An error occurred during research';
+        showToast(message, 'error');
+        setLoadingState(false);
+        updateHistoryStatus(currentJobId, 'error');
+        closeEventSource();
+    }
+
+    function updateWorkerDisplay() {
+        if (!workersContainer) return;
+
+        workersContainer.innerHTML = '';
+
+        // Sort workers: pinned first, then by status, then by ID
+        const sortedWorkers = Array.from(workerProgress.entries()).sort(([idA, workerA], [idB, workerB]) => {
+            const pinnedA = pinnedWorkers.has(idA);
+            const pinnedB = pinnedWorkers.has(idB);
+
+            if (pinnedA && !pinnedB) return -1;
+            if (!pinnedA && pinnedB) return 1;
+
+            const statusOrder = { processing: 0, complete: 1, error: 2 };
+            const statusDiff = statusOrder[workerA.status] - statusOrder[workerB.status];
+            return statusDiff !== 0 ? statusDiff : idA.localeCompare(idB);
+        });
+
+        sortedWorkers.forEach(([workerId, worker]) => {
+            const workerElement = createWorkerElement(workerId, worker);
+            workersContainer.appendChild(workerElement);
+        });
+    }
+
+    function createWorkerElement(workerId, worker) {
+        const element = document.createElement('div');
+        element.className = 'worker-item';
+
+        element.innerHTML = `
+            <div class="worker-title">${worker.title}</div>
+            <div class="worker-progress">
+                <div class="worker-progress-bar" style="width: ${worker.progress}%"></div>
+            </div>
+            <small class="text-muted">${worker.progress}%</small>
+        `;
+
+        return element;
+    }
+
+    function updateOverallProgress(specificProgress = null) {
+        let progress = 0;
+
+        if (specificProgress !== null) {
+            progress = specificProgress;
+        } else if (workerProgress.size > 0) {
+            const totalProgress = Array.from(workerProgress.values())
+                .reduce((sum, worker) => sum + worker.progress, 0);
+            progress = Math.round(totalProgress / workerProgress.size);
+        }
+
+        progress = Math.min(Math.max(progress, 0), 100);
+
+        if (overallProgressFill) {
+            overallProgressFill.style.width = `${progress}%`;
+        }
+
+        if (overallProgressText) {
+            overallProgressText.textContent = `${progress}%`;
+        }
+    }
+
+    function closeEventSource() {
+        if (eventSource) {
             eventSource.close();
             eventSource = null;
-            if (currentJobId) {
-                // Try to get final results even if SSE fails
-                setTimeout(() => {
-                    resetForm();
-                    loadJobHistory();
-                }, 1000);
-            }
-        };
-    }
-    
-    // Add content to results display
-    function addContentToResults(data) {
-        const content = data.text || '';
-        
-        // Check if we need to replace the welcome message
-        const welcomeMessage = resultsContent.querySelector('.welcome-message');
-        if (welcomeMessage) {
-            welcomeMessage.remove();
         }
-        
-        // Parse and add the markdown content
+    }
+
+    function addUserMessage(content) {
+        const messageElement = createMessageElement('user', content);
+        appendMessage(messageElement);
+    }
+
+    function addAssistantMessage(title, content) {
+        const messageElement = createMessageElement('assistant', content, title);
+        appendMessage(messageElement);
+    }
+
+    function createMessageElement(sender, content, title = null) {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}`;
+
         const contentDiv = document.createElement('div');
-        contentDiv.innerHTML = marked.parse(content);
-        resultsContent.appendChild(contentDiv);
-        
-        // Scroll to bottom
-        resultsContent.scrollTop = resultsContent.scrollHeight;
-    }
-    
-    // Update worker progress
-    function updateWorkerProgress(data) {
-        const sectionKey = data.section_key || 'unknown';
-        const sectionTitle = data.section_title || 'Unknown Section';
-        const progress = data.progress || 0;
-        
-        workerProgress[sectionKey] = progress;
-        workerTitles[sectionKey] = sectionTitle;
-        
-        // Update the specific worker progress bar
-        updateSpecificWorkerBar(sectionKey, sectionTitle, progress);
-        
-        // Calculate and update overall progress
-        updateOverallProgress();
-    }
-    
-    // Create or update a specific worker progress bar
-    function updateSpecificWorkerBar(sectionKey, sectionTitle, progress) {
-        let workerElement = document.querySelector(`[data-section-key="${sectionKey}"]`);
-        
-        if (!workerElement) {
-            workerElement = document.createElement('div');
-            workerElement.className = 'worker-progress';
-            workerElement.setAttribute('data-section-key', sectionKey);
-            
-            workerElement.innerHTML = `
-                <div class="worker-header">
-                    <div class="worker-title"><i class="fas fa-cogs"></i> ${sectionTitle}</div>
-                    <button class="worker-pin" title="Pin worker"><i class="fas fa-thumbtack"></i></button>
-                </div>
-                <div class="worker-progress-bar">
-                    <div class="worker-progress-fill" style="width: ${progress}%"></div>
-                </div>
-                <div class="worker-progress-text">${progress}%</div>
-            `;
-            
-            workersContainer.appendChild(workerElement);
-            
-            // Add pin functionality
-            const pinBtn = workerElement.querySelector('.worker-pin');
-            pinBtn.addEventListener('click', function() {
-                // Toggle pinned state
-                workerElement.classList.toggle('pinned');
-                const icon = pinBtn.querySelector('i');
-                icon.className = workerElement.classList.contains('pinned') ? 'fas fa-thumbtack' : 'fas fa-thumbtack';
-                // In a real implementation, we would rotate the icon when pinned
-            });
-        } else {
-            // Update existing progress bar
-            const progressFill = workerElement.querySelector('.worker-progress-fill');
-            const progressText = workerElement.querySelector('.worker-progress-text');
-            const titleElement = workerElement.querySelector('.worker-title');
-            
-            progressFill.style.width = `${progress}%`;
-            progressText.textContent = `${progress}%`;
-            // Keep icon in title but update text
-            titleElement.innerHTML = `<i class="fas fa-cogs"></i> ${sectionTitle}`;
+        contentDiv.className = 'message-content';
+
+        if (sender === 'assistant' && title) {
+            const titleElement = document.createElement('h4');
+            titleElement.textContent = title;
+            titleElement.style.marginTop = '0';
+            titleElement.style.marginBottom = '16px';
+            titleElement.style.color = 'var(--text-primary)';
+            contentDiv.appendChild(titleElement);
         }
+
+        const textContent = document.createElement('div');
+        textContent.innerHTML = marked.parse(content);
+        contentDiv.appendChild(textContent);
+
+        messageDiv.appendChild(contentDiv);
+        return messageDiv;
     }
-    
-    // Update overall progress
-    function updateOverallProgress() {
-        const progressValues = Object.values(workerProgress);
-        if (progressValues.length === 0) {
-            overallProgressFill.style.width = '0%';
-            return;
-        }
-        
-        const totalProgress = progressValues.reduce((sum, val) => sum + val, 0);
-        const avgProgress = Math.round(totalProgress / progressValues.length);
-        
-        overallProgressFill.style.width = `${avgProgress}%`;
-    }
-    
-    // Reset form after completion
-    function resetForm() {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> <span>Initiate Research</span>';
-    }
-    
-    // Load job history
-    async function loadJobHistory() {
-        try {
-            const response = await fetch('/api/history');
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+
+    function appendMessage(messageElement) {
+        if (chatMessages) {
+            chatMessages.appendChild(messageElement);
+
+            if (settings.autoScroll) {
+                scrollToBottom();
             }
-            
-            jobHistory = await response.json();
-            
-            // Update total reports counter
-            totalReportsCount.textContent = `${jobHistory.length} Reports`;
-            
-            renderJobHistory(jobHistory);
-        } catch (error) {
-            console.error('Error loading job history:', error);
         }
     }
-    
-    // Render job history
-    function renderJobHistory(jobs) {
-        jobHistoryList.innerHTML = '';
-        
-        if (jobs.length === 0) {
-            jobHistoryList.innerHTML = '<div class="no-results"><i class="fas fa-inbox"></i> <p>No research history yet</p></div>';
+
+    function scrollToBottom() {
+        const chatContainer = chatMessages.parentElement;
+        if (chatContainer) {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    }
+
+    function hideWelcomeScreen() {
+        if (welcomeScreen) {
+            welcomeScreen.style.display = 'none';
+        }
+        if (chatMessages) {
+            chatMessages.style.display = 'block';
+        }
+    }
+
+    function showWelcomeScreen() {
+        if (welcomeScreen) {
+            welcomeScreen.style.display = 'flex';
+        }
+        if (chatMessages) {
+            chatMessages.style.display = 'none';
+        }
+    }
+
+    function showProgressIndicator() {
+        if (progressIndicator) {
+            progressIndicator.style.display = 'block';
+        }
+    }
+
+    function hideProgressIndicator() {
+        if (progressIndicator) {
+            progressIndicator.style.display = 'none';
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        if (!statusToast || !statusToastBody || !statusToastIcon) return;
+
+        // Set icon and color based on type
+        const icons = {
+            success: 'fas fa-check-circle text-success',
+            error: 'fas fa-exclamation-circle text-danger',
+            warning: 'fas fa-exclamation-triangle text-warning',
+            info: 'fas fa-info-circle text-primary'
+        };
+
+        statusToastIcon.className = icons[type] || icons.info;
+        statusToastBody.textContent = message;
+
+        toast.show();
+    }
+
+    function setLoadingState(loading) {
+        if (loadingOverlay) {
+            if (loading) {
+                loadingOverlay.classList.remove('d-none');
+            } else {
+                loadingOverlay.classList.add('d-none');
+            }
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = loading;
+            if (loading) {
+                submitBtn.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+            } else {
+                submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            }
+        }
+    }
+
+    function startNewChat() {
+        // Reset state
+        currentJobId = null;
+        workerProgress.clear();
+        pinnedWorkers.clear();
+
+        // Reset UI
+        showWelcomeScreen();
+        hideProgressIndicator();
+        setLoadingState(false);
+
+        // Clear chat messages
+        if (chatMessages) {
+            chatMessages.innerHTML = '';
+        }
+
+        // Close event source
+        closeEventSource();
+
+        // Focus input
+        focusInput();
+
+        // Close mobile sidebar
+        closeMobileSidebar();
+
+        showToast('New chat started', 'info');
+    }
+
+    function clearCurrentChat() {
+        if (confirm('Are you sure you want to clear the current chat?')) {
+            startNewChat();
+        }
+    }
+
+    function focusInput() {
+        if (topicInput) {
+            topicInput.focus();
+        }
+    }
+
+    // History Management
+    function addToHistory(jobId, topic, status, depth) {
+        const historyItem = {
+            id: jobId,
+            topic: topic,
+            status: status,
+            depth: depth,
+            timestamp: new Date().toISOString(),
+            date: new Date().toLocaleDateString()
+        };
+
+        jobHistoryData.unshift(historyItem);
+        updateHistoryDisplay();
+        updateStats();
+        saveHistoryToStorage();
+    }
+
+    function updateHistoryStatus(jobId, status) {
+        const item = jobHistoryData.find(item => item.id === jobId);
+        if (item) {
+            item.status = status;
+            updateHistoryDisplay();
+            updateStats();
+            saveHistoryToStorage();
+        }
+    }
+
+    function updateHistoryDisplay() {
+        [jobHistory, jobHistoryMobile].forEach(container => {
+            if (!container) return;
+
+            container.innerHTML = '';
+
+            jobHistoryData.forEach(item => {
+                const historyElement = createHistoryElement(item);
+                container.appendChild(historyElement);
+            });
+        });
+    }
+
+    function createHistoryElement(item) {
+        const element = document.createElement('div');
+        element.className = `chat-item ${item.id === currentJobId ? 'active' : ''}`;
+        element.onclick = () => loadHistoryItem(item);
+        element.title = item.topic;
+
+        element.innerHTML = `
+            <div style="font-weight: 500; margin-bottom: 4px;">${item.topic}</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">
+                ${item.date} • ${item.status}
+            </div>
+        `;
+
+        return element;
+    }
+
+    async function loadHistoryItem(item) {
+        try {
+            showToast('Loading conversation...', 'info');
+
+            // Fetch the complete job data
+            const response = await fetch(`/api/jobs/${item.id}/load`);
+            if (!response.ok) {
+                throw new Error(`Failed to load job: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            // Clear current chat and hide welcome screen
+            hideWelcomeScreen();
+            if (chatMessages) {
+                chatMessages.innerHTML = '';
+            }
+
+            // Add user message (original question)
+            addUserMessage(data.job.topic);
+
+            // Add each section as assistant messages
+            if (data.sections && data.sections.length > 0) {
+                data.sections.forEach(section => {
+                    if (section.output_md && section.output_md.trim()) {
+                        addAssistantMessage(section.title, section.output_md);
+                    }
+                });
+            }
+
+            // Update current job ID
+            currentJobId = item.id;
+
+            // Update history display to show active item
+            updateHistoryDisplay();
+
+            // Close mobile sidebar
+            closeMobileSidebar();
+
+            showToast('Conversation loaded successfully', 'success');
+
+        } catch (error) {
+            console.error('Error loading history item:', error);
+            showToast('Failed to load conversation', 'error');
+        }
+    }
+
+    function filterHistory() {
+        const query = (searchHistory?.value || searchHistoryMobile?.value || '').toLowerCase();
+
+        if (!query) {
+            updateHistoryDisplay();
             return;
         }
-        
-        jobs.forEach(job => {
-            const li = document.createElement('li');
-            li.className = 'job-item';
-            
-            // Format status class
-            const statusClass = `status-${job.status.toLowerCase().replace(' ', '-')}`;
-            
-            li.innerHTML = `
-                <div class="job-topic"><i class="fas fa-file-alt"></i> ${job.topic}</div>
-                <div class="job-meta">
-                    <div>Depth: ${job.depth} • ${formatDate(job.created_at)}</div>
-                    <div class="job-status ${statusClass}">${job.status}</div>
-                </div>
-            `;
-            
-            li.addEventListener('click', () => {
-                // Load job results (in a real app, this would load the full results)
-                resultsContent.innerHTML = `<div class="loading-results"><i class="fas fa-spinner fa-spin"></i> Loading results for: ${job.topic}</div>`;
+
+        const filteredItems = jobHistoryData.filter(item =>
+            item.topic.toLowerCase().includes(query)
+        );
+
+        [jobHistory, jobHistoryMobile].forEach(container => {
+            if (!container) return;
+
+            container.innerHTML = '';
+            filteredItems.forEach(item => {
+                const historyElement = createHistoryElement(item);
+                container.appendChild(historyElement);
             });
-            
-            jobHistoryList.appendChild(li);
         });
     }
-    
-    // Format date
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-GB', { 
-            day: '2-digit', 
-            month: 'short', 
-            year: 'numeric' 
-        });
+
+    function updateStats() {
+        const activeCount = jobHistoryData.filter(item => item.status === 'processing').length;
+        const totalCount = jobHistoryData.length;
+
+        if (activeResearchCount) {
+            activeResearchCount.textContent = activeCount;
+        }
+
+        if (totalReportsCount) {
+            totalReportsCount.textContent = totalCount;
+        }
     }
-    
-    // Load initial history
-    loadJobHistory();
-    
-    // Initialize marked.js for markdown rendering
-    marked.setOptions({
-        breaks: true,
-        gfm: true
+
+    function loadJobHistory() {
+        try {
+            const stored = localStorage.getItem('researchHistory');
+            if (stored) {
+                jobHistoryData = JSON.parse(stored);
+                updateHistoryDisplay();
+                updateStats();
+            }
+        } catch (error) {
+            console.warn('Failed to load job history:', error);
+            jobHistoryData = [];
+        }
+    }
+
+    function saveHistoryToStorage() {
+        try {
+            localStorage.setItem('researchHistory', JSON.stringify(jobHistoryData));
+        } catch (error) {
+            console.warn('Failed to save job history:', error);
+        }
+    }
+
+    // Settings Management
+    function loadSettings() {
+        try {
+            const stored = localStorage.getItem('appSettings');
+            if (stored) {
+                settings = { ...settings, ...JSON.parse(stored) };
+                applySettings();
+            }
+        } catch (error) {
+            console.warn('Failed to load settings:', error);
+        }
+    }
+
+    function saveSettings() {
+        const themeSelect = document.getElementById('theme-select');
+        const autoScrollCheck = document.getElementById('auto-scroll');
+
+        if (themeSelect) settings.theme = themeSelect.value;
+        if (autoScrollCheck) settings.autoScroll = autoScrollCheck.checked;
+
+        try {
+            localStorage.setItem('appSettings', JSON.stringify(settings));
+            applySettings();
+            settingsModal.hide();
+            showToast('Settings saved successfully', 'success');
+        } catch (error) {
+            console.warn('Failed to save settings:', error);
+            showToast('Failed to save settings', 'error');
+        }
+    }
+
+    function applySettings() {
+        applyTheme();
+
+        // Update UI elements
+        const themeSelect = document.getElementById('theme-select');
+        const autoScrollCheck = document.getElementById('auto-scroll');
+
+        if (themeSelect) themeSelect.value = settings.theme;
+        if (autoScrollCheck) autoScrollCheck.checked = settings.autoScroll;
+    }
+
+    function applyTheme() {
+        const theme = settings.theme;
+        if (theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        } else if (theme === 'auto') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.removeAttribute('data-theme');
+        }
+    }
+
+    // Export Functions
+    function exportResults(format) {
+        const content = extractChatContent();
+
+        switch (format) {
+            case 'pdf':
+                exportToPDF(content);
+                break;
+            case 'word':
+                exportToWord(content);
+                break;
+            case 'markdown':
+                exportToMarkdown(content);
+                break;
+        }
+
+        exportModal.hide();
+    }
+
+    function extractChatContent() {
+        const messages = chatMessages?.querySelectorAll('.message') || [];
+        let content = '';
+
+        messages.forEach(message => {
+            const messageContent = message.querySelector('.message-content');
+            if (messageContent) {
+                content += messageContent.textContent + '\n\n';
+            }
+        });
+
+        return content;
+    }
+
+    function exportToPDF(content) {
+        console.log('Exporting to PDF:', content);
+        showToast('PDF export will be implemented in Stage 3', 'info');
+    }
+
+    function exportToWord(content) {
+        console.log('Exporting to Word:', content);
+        showToast('Word export will be implemented in Stage 3', 'info');
+    }
+
+    function exportToMarkdown(content) {
+        const blob = new Blob([content], { type: 'text/markdown' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `research-${new Date().toISOString().split('T')[0]}.md`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Markdown export completed', 'success');
+    }
+
+    // Listen for theme changes
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+        if (settings.theme === 'auto') {
+            applyTheme();
+        }
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+        closeEventSource();
+    });
+
+    // Add smooth scrolling to anchor links
+    document.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A' && e.target.getAttribute('href')?.startsWith('#')) {
+            e.preventDefault();
+            const target = document.querySelector(e.target.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    });
+
+    // Handle online/offline status
+    window.addEventListener('online', () => {
+        showToast('Connection restored', 'success');
+    });
+
+    window.addEventListener('offline', () => {
+        showToast('Connection lost - working offline', 'warning');
     });
 });

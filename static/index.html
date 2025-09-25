@@ -3,150 +3,394 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cybersecurity Research Platform | Advanced AI-Powered Analysis</title>
-    <meta name="description" content="Professional cybersecurity research platform with AI-powered analysis and real-time insights">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Cybersecurity Research AI | ChatGPT-Style Interface</title>
+    <meta name="description" content="Advanced AI-powered cybersecurity research platform with ChatGPT-style interface">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
 </head>
-<body>
-    <div id="app">
-        <header>
-            <div class="header-content">
-                <div class="logo-section">
-                    <i class="fas fa-shield-alt header-icon"></i>
-                    <h1>Cybersecurity Research Platform</h1>
-                </div>
-                <div class="header-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-chart-line"></i>
-                        <span id="active-research">0 Active</span>
+<body class="bg-light">
+    <!-- Main Container -->
+    <div class="container-fluid h-100 p-0">
+        <div class="row h-100 g-0">
+
+            <!-- Sidebar -->
+            <div class="col-auto d-none d-lg-block">
+                <div id="sidebar" class="sidebar h-100 d-flex flex-column">
+                    <!-- Sidebar Header -->
+                    <div class="sidebar-header p-3 border-bottom">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <h5 class="sidebar-title mb-0">
+                                <i class="fas fa-shield-alt text-gradient me-2"></i>
+                                <span class="text-gradient fw-bold">CyberAI</span>
+                            </h5>
+                            <button id="new-chat-btn" class="btn btn-sm btn-primary rounded-pill px-3">
+                                <i class="fas fa-plus me-1"></i>New
+                            </button>
+                        </div>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-database"></i>
-                        <span id="total-reports">0 Reports</span>
+
+                    <!-- Chat History -->
+                    <div class="sidebar-content flex-grow-1 p-3 overflow-auto">
+                        <!-- Search -->
+                        <div class="search-box mb-3">
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text bg-transparent border-end-0">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <input type="text" id="search-history" class="form-control border-start-0"
+                                       placeholder="Search conversations...">
+                            </div>
+                        </div>
+
+                        <!-- Recent Chats -->
+                        <div class="chat-history">
+                            <h6 class="history-section-title mb-2">
+                                <i class="fas fa-clock me-2"></i>Recent
+                            </h6>
+                            <div id="job-history" class="chat-list">
+                                <!-- Chat history items will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar Footer -->
+                    <div class="sidebar-footer p-3 border-top">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="stats d-flex gap-3">
+                                <div class="stat-item">
+                                    <i class="fas fa-chart-line text-success"></i>
+                                    <small id="active-research" class="text-muted ms-1">0</small>
+                                </div>
+                                <div class="stat-item">
+                                    <i class="fas fa-database text-info"></i>
+                                    <small id="total-reports" class="text-muted ms-1">0</small>
+                                </div>
+                            </div>
+                            <button id="settings-btn" class="btn btn-sm btn-outline-secondary rounded-circle"
+                                    title="Settings">
+                                <i class="fas fa-cog"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </header>
-        
-        <main>
-            <div class="container">
-                <!-- Left Panel: Collapsible History -->
-                <div id="history-panel" class="panel left-panel">
-                    <div class="panel-header">
-                        <h2><i class="fas fa-history"></i> Research History</h2>
-                        <button id="toggle-history" class="toggle-btn">
-                            <i class="fas fa-eye"></i> <span>Hide</span>
+
+            <!-- Main Content -->
+            <div class="col">
+                <div id="main-content" class="main-content h-100 d-flex flex-column">
+
+                    <!-- Top Header (Mobile) -->
+                    <div class="mobile-header d-lg-none bg-white border-bottom p-3">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <button id="sidebar-toggle" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-bars"></i>
+                            </button>
+                            <h5 class="mb-0 text-gradient fw-bold">CyberAI</h5>
+                            <button id="new-chat-mobile" class="btn btn-primary btn-sm rounded-pill">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Chat Container -->
+                    <div class="chat-container flex-grow-1 position-relative">
+
+                        <!-- Welcome Screen -->
+                        <div id="welcome-screen" class="welcome-screen h-100 d-flex align-items-center justify-content-center">
+                            <div class="welcome-content text-center">
+                                <div class="welcome-icon mb-4">
+                                    <div class="icon-circle mx-auto mb-3">
+                                        <i class="fas fa-shield-alt"></i>
+                                    </div>
+                                </div>
+                                <h1 class="welcome-title mb-3">Cybersecurity Research AI</h1>
+                                <p class="welcome-subtitle mb-4">Your advanced AI assistant for cybersecurity research and analysis</p>
+
+                                <!-- Example Prompts -->
+                                <div class="row g-2 mb-4">
+                                    <div class="col-md-6">
+                                        <div class="example-card card border-0 shadow-sm h-100" role="button">
+                                            <div class="card-body text-start p-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fas fa-bug text-danger me-2"></i>
+                                                    <small class="text-muted">Vulnerability Research</small>
+                                                </div>
+                                                <p class="card-text mb-0">"Latest zero-day vulnerabilities in web applications"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="example-card card border-0 shadow-sm h-100" role="button">
+                                            <div class="card-body text-start p-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fas fa-shield-alt text-success me-2"></i>
+                                                    <small class="text-muted">Defense Strategies</small>
+                                                </div>
+                                                <p class="card-text mb-0">"Advanced persistent threat prevention techniques"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="example-card card border-0 shadow-sm h-100" role="button">
+                                            <div class="card-body text-start p-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fas fa-network-wired text-info me-2"></i>
+                                                    <small class="text-muted">Network Security</small>
+                                                </div>
+                                                <p class="card-text mb-0">"Best practices for securing cloud infrastructure"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="example-card card border-0 shadow-sm h-100" role="button">
+                                            <div class="card-body text-start p-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fas fa-eye text-warning me-2"></i>
+                                                    <small class="text-muted">Threat Intelligence</small>
+                                                </div>
+                                                <p class="card-text mb-0">"Emerging cyber threats in 2024"</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages -->
+                        <div id="chat-messages" class="chat-messages h-100 overflow-auto p-3" style="display: none;">
+                            <!-- Messages will be dynamically added here -->
+                        </div>
+
+                        <!-- Progress Indicator (Floating) -->
+                        <div id="progress-indicator" class="progress-indicator position-fixed" style="display: none;">
+                            <div class="progress-card card shadow-lg border-0">
+                                <div class="card-body p-3">
+                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                        <small class="text-muted fw-semibold">
+                                            <i class="fas fa-sync-alt fa-spin me-1"></i>Researching...
+                                        </small>
+                                        <span id="overall-progress-text" class="badge bg-primary">0%</span>
+                                    </div>
+                                    <div class="progress mb-2" style="height: 6px;">
+                                        <div class="progress-bar progress-bar-animated"
+                                             id="overall-progress-fill" style="width: 0%;"></div>
+                                    </div>
+                                    <div id="workers-container" class="workers-grid">
+                                        <!-- Worker progress items will be added here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Status Toast -->
+                        <div id="status-toast" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;">
+                            <div id="status-toast-element" class="toast" role="alert">
+                                <div class="toast-header">
+                                    <i id="toast-icon" class="fas fa-info-circle text-primary me-2"></i>
+                                    <strong class="me-auto">Status</strong>
+                                    <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                                </div>
+                                <div class="toast-body" id="toast-body">
+                                    Ready to help with your cybersecurity research
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="input-area bg-white border-top">
+                        <div class="container-fluid py-3">
+                            <div class="row justify-content-center">
+                                <div class="col-12 col-lg-8 col-xl-6">
+                                    <form id="research-form" class="position-relative">
+                                        <div class="input-container">
+                                            <textarea id="topic" name="topic"
+                                                    class="form-control input-textarea"
+                                                    placeholder="Ask about cybersecurity research..."
+                                                    rows="1" required></textarea>
+
+                                            <div class="input-actions d-flex align-items-end">
+                                                <!-- Depth Selector -->
+                                                <div class="dropdown me-2">
+                                                    <button type="button" id="depth-btn"
+                                                            class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                                                            data-bs-toggle="dropdown"
+                                                            title="Research depth">
+                                                        <i class="fas fa-layer-group me-1"></i>
+                                                        <span id="depth-text">Standard</span>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item depth-option" href="#" data-value="1">
+                                                            <i class="fas fa-circle text-success me-2"></i>Basic
+                                                        </a></li>
+                                                        <li><a class="dropdown-item depth-option active" href="#" data-value="2">
+                                                            <i class="fas fa-circle text-info me-2"></i>Standard
+                                                        </a></li>
+                                                        <li><a class="dropdown-item depth-option" href="#" data-value="3">
+                                                            <i class="fas fa-circle text-warning me-2"></i>Comprehensive
+                                                        </a></li>
+                                                        <li><a class="dropdown-item depth-option" href="#" data-value="4">
+                                                            <i class="fas fa-circle text-danger me-2"></i>Advanced
+                                                        </a></li>
+                                                        <li><a class="dropdown-item depth-option" href="#" data-value="5">
+                                                            <i class="fas fa-circle text-dark me-2"></i>Expert
+                                                        </a></li>
+                                                    </ul>
+                                                </div>
+
+                                                <!-- Submit Button -->
+                                                <button type="submit" id="submit-btn"
+                                                        class="btn btn-primary submit-btn">
+                                                    <i class="fas fa-paper-plane"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <input type="hidden" id="depth" name="depth" value="2">
+
+                                        <!-- Quick Actions -->
+                                        <div class="quick-actions mt-2 d-flex justify-content-between align-items-center">
+                                            <div class="action-buttons">
+                                                <button type="button" id="clear-chat-btn"
+                                                        class="btn btn-sm btn-outline-secondary me-2">
+                                                    <i class="fas fa-eraser me-1"></i>Clear
+                                                </button>
+                                                <button type="button" id="export-btn"
+                                                        class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-download me-1"></i>Export
+                                                </button>
+                                            </div>
+                                            <small class="text-muted">
+                                                <kbd>Enter</kbd> to send • <kbd>Shift + Enter</kbd> for new line
+                                            </small>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay d-lg-none"></div>
+
+    <!-- Mobile Sidebar -->
+    <div id="mobile-sidebar" class="mobile-sidebar d-lg-none">
+        <div class="mobile-sidebar-header p-3 border-bottom">
+            <div class="d-flex align-items-center justify-content-between">
+                <h5 class="mb-0 text-gradient fw-bold">CyberAI</h5>
+                <button id="sidebar-close" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="mobile-sidebar-content p-3 flex-grow-1 overflow-auto">
+            <!-- Same content as desktop sidebar -->
+            <div class="search-box mb-3">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" id="search-history-mobile" class="form-control border-start-0"
+                           placeholder="Search conversations...">
+                </div>
+            </div>
+            <div class="chat-history">
+                <h6 class="history-section-title mb-2">
+                    <i class="fas fa-clock me-2"></i>Recent
+                </h6>
+                <div id="job-history-mobile" class="chat-list">
+                    <!-- Mobile chat history will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div class="modal fade" id="exportModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-download text-primary me-2"></i>Export Conversation
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-4">Choose your preferred export format:</p>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-danger" id="export-pdf">
+                            <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                        </button>
+                        <button class="btn btn-outline-success" id="export-word">
+                            <i class="fas fa-file-word me-2"></i>Export as Word Document
+                        </button>
+                        <button class="btn btn-outline-info" id="export-markdown">
+                            <i class="fab fa-markdown me-2"></i>Export as Markdown
                         </button>
                     </div>
-                    <div id="history-list" class="panel-content">
-                        <div class="search-box">
-                            <input type="text" id="search-history" placeholder="Search research history...">
-                            <i class="fas fa-search"></i>
-                        </div>
-                        <ul id="job-history"></ul>
-                    </div>
-                </div>
-                
-                <!-- Right Panel: Research Interface -->
-                <div id="research-panel" class="panel right-panel">
-                    <div class="panel-header">
-                        <h2><i class="fas fa-brain"></i> New Research Analysis</h2>
-                    </div>
-                    <div class="panel-content">
-                        <div class="welcome-section">
-                            <h3><i class="fas fa-rocket"></i> Start Advanced Research</h3>
-                            <p>Enter your cybersecurity topic below to initiate comprehensive analysis using AI-powered research</p>
-                        </div>
-                        
-                        <form id="research-form">
-                            <div class="input-group">
-                                <label for="topic"><i class="fas fa-key"></i> Research Topic</label>
-                                <input type="text" id="topic" name="topic" required placeholder="Enter your research topic (e.g., Zero Trust Architecture, Ransomware Prevention, etc.)">
-                            </div>
-                            
-                            <div class="input-group">
-                                <label for="depth"><i class="fas fa-layer-group"></i> Research Depth</label>
-                                <div class="depth-selector">
-                                    <input type="range" id="depth-slider" min="1" max="5" value="3" class="slider">
-                                    <div class="depth-labels">
-                                        <span class="depth-label active" data-value="1">Basic</span>
-                                        <span class="depth-label" data-value="2">Standard</span>
-                                        <span class="depth-label" data-value="3">Comprehensive</span>
-                                        <span class="depth-label" data-value="4">Advanced</span>
-                                        <span class="depth-label" data-value="5">Expert</span>
-                                    </div>
-                                    <input type="hidden" id="depth" name="depth" value="3">
-                                </div>
-                            </div>
-                            
-                            <button type="submit" id="submit-btn">
-                                <i class="fas fa-paper-plane"></i> <span>Initiate Research</span>
-                            </button>
-                        </form>
-                        
-                        <div id="progress-container" class="progress-container" style="display: none;">
-                            <h4><i class="fas fa-sync-alt fa-spin"></i> Research Progress</h4>
-                            <div class="overall-progress">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 0%;"></div>
-                                </div>
-                                <span class="progress-text">0%</span>
-                            </div>
-                        </div>
-                        
-                        <div id="workers-container" class="workers-container">
-                            <!-- Worker progress bars will be added here dynamically -->
-                        </div>
-                        
-                        <div id="results-container" class="results-container">
-                            <div class="results-header">
-                                <h3><i class="fas fa-file-alt"></i> Research Findings</h3>
-                                <div class="results-actions">
-                                    <button class="export-btn" id="export-pdf" title="Export to PDF">
-                                        <i class="fas fa-file-pdf"></i> PDF
-                                    </button>
-                                    <button class="export-btn" id="export-word" title="Export to Word">
-                                        <i class="fas fa-file-word"></i> DOC
-                                    </button>
-                                    <button class="export-btn" id="export-markdown" title="Export to Markdown">
-                                        <i class="fab fa-markdown"></i> MD
-                                    </button>
-                                </div>
-                            </div>
-                            <div id="results-content" class="results-content">
-                                <div class="welcome-message">
-                                    <i class="fas fa-chart-network fa-3x"></i>
-                                    <h3>Research Insights Awaiting</h3>
-                                    <p>Submit a topic to begin advanced cybersecurity analysis</p>
-                                </div>
-                                <!-- Results will appear here -->
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </div>
-        </main>
-        
-        <footer class="app-footer">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h4>Cybersecurity Research Platform</h4>
-                    <p>AI-powered analysis for modern security challenges</p>
-                </div>
-                <div class="footer-section">
-                    <h4>Powered By</h4>
-                    <p>OpenRouter AI • Alibaba Tongyi DeepResearch</p>
-                </div>
-                <div class="footer-section">
-                    <h4>© 2025</h4>
-                    <p>All rights reserved</p>
-                </div>
-            </div>
-        </footer>
+        </div>
     </div>
-    
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cog text-primary me-2"></i>Settings
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="theme-select" class="form-label">Theme</label>
+                        <select class="form-select" id="theme-select">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                            <option value="auto">Auto</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="auto-scroll" checked>
+                            <label class="form-check-label" for="auto-scroll">
+                                Auto-scroll to new messages
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="save-settings">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay d-none">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <h5 class="loading-title">Initializing Research...</h5>
+            <p class="loading-text">Please wait while we process your request</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/marked.min.js"></script>
     <script src="/static/js/main.js"></script>
 </body>

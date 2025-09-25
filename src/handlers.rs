@@ -1,14 +1,15 @@
 use axum::{
-    extract::{State, Path},
-    response::Sse,
+    extract::{Path, State},
+    response::{Html, Sse},
     Json,
 };
 use futures::stream::Stream;
-use std::sync::Arc;
-use tokio_stream::{self as stream};
 
 use crate::{
-    api::{submit_job as api_submit_job, get_job_history as api_get_job_history, stream_job as api_stream_job},
+    api::{
+        get_job_history as api_get_job_history, get_job_sections as api_get_job_sections,
+        stream_job as api_stream_job, submit_job as api_submit_job,
+    },
     models::JobSubmission,
     AppState,
 };
@@ -43,7 +44,6 @@ pub async fn cancel_handler(
 ) -> Result<Json<crate::models::Job>, (axum::http::StatusCode, String)> {
     crate::api::cancel_job(State(app_state), Path(job_id))
         .await
-        .map_err(|e| e)
 }
 
 pub async fn resume_handler(
@@ -52,7 +52,6 @@ pub async fn resume_handler(
 ) -> Result<Json<crate::models::Job>, (axum::http::StatusCode, String)> {
     crate::api::resume_job(State(app_state), Path(job_id))
         .await
-        .map_err(|e| e)
 }
 
 pub async fn status_handler(
@@ -61,5 +60,26 @@ pub async fn status_handler(
 ) -> Result<Json<crate::models::Job>, (axum::http::StatusCode, String)> {
     crate::api::get_job_status(State(app_state), Path(job_id))
         .await
-        .map_err(|e| e)
+}
+
+pub async fn sections_handler(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<Vec<crate::models::Section>>, (axum::http::StatusCode, String)> {
+    api_get_job_sections(State(app_state), Path(job_id))
+        .await
+}
+
+pub async fn load_job_handler(
+    State(app_state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> Result<Json<serde_json::Value>, (axum::http::StatusCode, String)> {
+    crate::api::load_job_content(State(app_state), Path(job_id))
+        .await
+}
+
+pub async fn index_handler() -> Html<String> {
+    Html(std::fs::read_to_string("static/index.html").unwrap_or_else(|_| {
+        "<!DOCTYPE html><html><head><title>Server Error</title></head><body><h1>Unable to load application</h1></body></html>".to_string()
+    }).into())
 }

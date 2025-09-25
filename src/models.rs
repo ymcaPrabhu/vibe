@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Job {
@@ -83,7 +82,7 @@ pub struct JobSubmission {
     pub depth: i32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SseEvent {
     pub kind: String,
     pub text: Option<String>,
