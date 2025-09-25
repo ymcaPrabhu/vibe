@@ -1,25 +1,29 @@
-# Cybersecurity Research App (Stage 1)
+# Cybersecurity Research App (Stage 2)
 
 ## Overview
-This is a production-grade, Rust-first research application for cybersecurity topics with a Manager-Workers architecture, ChatGPT-style UI (collapsible history left, streaming content right), per-worker progress bars (pin-able), and stage-gated delivery with comprehensive testing at each stage.
+This is a production-grade, Rust-first research application for cybersecurity topics with a Manager-Workers architecture, ChatGPT-style UI (collapsible history left, streaming content right), per-worker progress bars (pin-able), and stage-gated delivery with comprehensive testing at each stage. Stage 2 has enhanced the platform with real research capabilities, robust provenance tracking, and enhanced resilience.
 
-### Key Features (Stage 1)
+### Key Features (Stage 1 & 2)
 - Manager-Workers architecture for parallel research processing
 - Real-time streaming of research output with progress tracking
 - Collapsible history panel for previous research jobs
 - Government of India writing style compliance
-- Comprehensive citation verification system
+- Comprehensive citation verification system with provenance tracking
 - Support for both SQLite (dev) and serverless Postgres (production)
-- OpenRouter integration with Alibaba Tongyi DeepResearch 30B model for research
+- Real research with constrained, ethical retrieval from trusted domains
+- Per-section artifacts index with artifact storage and retrieval
+- Enhanced resilience with job resumption and cancellation capabilities
+- Complete citations covering every claim with verification and support levels
 
-## Architecture Summary (Stage 1)
+## Architecture Summary (Stage 2)
 
 ### Backend Components
-1. **Manager** - Orchestrates the research process, generates outlines, and coordinates workers
-2. **Workers** - Generate content for individual sections in parallel with proper citations, using OpenRouter API
-3. **Database Layer** - Abstracts between SQLite and Postgres for portability
-4. **API Layer** - Handles job submission, history retrieval, and streaming
-5. **SSE System** - Real-time progress and content streaming to frontend
+1. **Manager** - Orchestrates the research process, generates outlines, and coordinates workers; now includes job cancellation and resumption capabilities
+2. **Workers** - Generate content for individual sections in parallel with proper citations, using both OpenRouter API and direct research from trusted sources
+3. **Artifacts Store** - Manages per-section artifacts with metadata and content
+4. **Database Layer** - Abstracts between SQLite and Postgres for portability; now includes artifacts table
+5. **API Layer** - Handles job submission, history retrieval, streaming, and job management (cancellation/resumption)
+6. **SSE System** - Real-time progress and content streaming to frontend
 
 ### Frontend Components
 1. **History Panel** - Shows previous research jobs with ability to collapse/expand
@@ -27,14 +31,15 @@ This is a production-grade, Rust-first research application for cybersecurity to
 3. **Progress Tracking** - Overall progress and per-worker progress bars
 4. **Content Display** - Streaming results with markdown rendering
 5. **Worker Pinning** - Ability to pin important worker progress to top
+6. **Job Management** - UI controls for job cancellation and resumption
 
 ### Data Flow
 1. User submits topic and depth via the frontend
 2. Manager receives the job and generates a comprehensive outline
 3. Workers are spawned for each section of the outline
-4. Each worker calls OpenRouter API to generate research content and citations
-5. Progress and content are streamed to the frontend in real-time via SSE
-6. Final content is aggregated and displayed
+4. Each worker conducts real research from trusted domains and generates content with proper citations and artifacts
+5. Progress, content, and artifacts are streamed to the frontend in real-time via SSE
+6. Final content is aggregated and displayed with all supporting artifacts
 
 ## Setup Instructions
 
@@ -135,20 +140,20 @@ See the [DEPLOYMENT.md](./DEPLOYMENT.md) file for comprehensive backend deployme
 3. Update the `netlify.toml` file with your backend server URL before deploying the frontend
 4. Deploy the frontend using: `netlify deploy --dir=static --prod`
 
-## Known Limitations (Stage 1)
+## New Features in Stage 2
 
-1. Citation verification uses lightweight methods only (DOI/title lookups via public APIs)
-2. No full-site crawling capabilities (planned for Stage 2)
-3. Workers use OpenRouter API to generate content based on prompts rather than deep research
-4. Limited to cybersecurity topics (though architecture is flexible for other domains)
+1. **Real Research with Constrained, Ethical Retrieval** - Workers now retrieve and process actual content from trusted academic and research domains (arXiv, IEEE Xplore, NVD, etc.) instead of just relying on API calls
+2. **Robust Provenance Tracking** - All claims now include provenance information showing their original source
+3. **Complete Citations with Verification** - Enhanced citation system with verification status and claim support levels
+4. **Per-Section Artifacts Index** - Each research section now generates relevant artifacts (summaries, tables, code snippets, mappings, etc.)
+5. **Enhanced Resilience** - Added job cancellation and resumption capabilities for better error handling
+6. **Improved Verification** - Claims are validated against their sources to ensure accuracy
 
-## Planned for Stage 2
+## Known Limitations (Stage 2)
 
-1. Real research with constrained, ethical retrieval
-2. Robust provenance tracking
-3. Complete citations covering every claim
-4. Per-section artifacts index
-5. Enhanced resilience with job resumption and cancellation
+1. Limited to specific trusted domains for research (to ensure ethical retrieval)
+2. Limited to cybersecurity topics (though architecture is flexible for other domains)
+3. Some research capabilities still rely on API services for enhanced content generation
 
 ## Code Quality
 
