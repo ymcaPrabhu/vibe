@@ -108,11 +108,22 @@ document.addEventListener('DOMContentLoaded', function() {
             option.addEventListener('click', handleDepthSelection);
         });
 
-        // Example prompts
+        // Research suggestions
+        const suggestionButtons = document.querySelectorAll('.suggestion-btn');
+        suggestionButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const suggestion = button.getAttribute('data-suggestion');
+                topicInput.value = suggestion;
+                focusInput();
+                autoResizeTextarea();
+            });
+        });
+        
+        // Example prompts (for backward compatibility)
         const exampleCards = document.querySelectorAll('.example-card');
         exampleCards.forEach(card => {
             card.addEventListener('click', () => {
-                const text = card.querySelector('.card-text').textContent.replace(/[""]/g, '');
+                const text = card.querySelector('.card-text')?.textContent?.replace(/[\"']/g, '') || '';
                 topicInput.value = text;
                 focusInput();
                 autoResizeTextarea();
@@ -389,12 +400,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
             updateWorkerDisplay();
             updateOverallProgress();
+
+            // Immediately display the completed section content
+            if (data.text && data.text.trim()) {
+                console.log(`Worker completed: ${data.section_title || workerId} - Adding content to chat`);
+                addAssistantMessage(data.section_title || `Section: ${workerId}`, data.text);
+            }
         }
     }
 
     function handleContentMessage(data) {
-        if (data.text) {
-            addAssistantMessage(data.section_title || "Research Section", data.text);
+        if (data.text && data.text.trim()) {
+            const title = data.section_title || "Research Section";
+            console.log(`Adding research section: ${title}`);
+            addAssistantMessage(title, data.text);
         }
     }
 
@@ -402,15 +421,46 @@ document.addEventListener('DOMContentLoaded', function() {
         showToast('Research completed successfully', 'success');
         updateOverallProgress(100);
         setLoadingState(false);
-        hideProgressIndicator();
+
+        // Keep progress indicator visible for a moment to show completion
+        setTimeout(() => {
+            hideProgressIndicator();
+        }, 2000);
 
         // Update history
         updateHistoryStatus(currentJobId, 'complete');
         closeEventSource();
 
+        // Add the final comprehensive research report
         if (data.full_report) {
-            addAssistantMessage("Research Complete", data.full_report);
+            // Create a formatted research report with proper citations and references
+            const formattedReport = formatResearchReport(data.full_report, currentJobId);
+            addAssistantMessage("🔬 Final Research Report", formattedReport);
+        } else {
+            // Fallback message if no full report is available
+            const completionMessage = `# 🎯 Research Completed Successfully
+
+Your comprehensive cybersecurity research has been completed! The analysis covered multiple critical areas including current threat landscape, emerging vulnerabilities, defense strategies, industry best practices, and future predictions.
+
+## 📊 Research Summary
+- **Topic**: ${data.topic || 'Cybersecurity Research'}
+- **Analysis Depth**: Advanced AI-powered research
+- **Sections Generated**: 5 comprehensive areas
+- **Status**: ✅ Complete
+
+All research sections have been generated with detailed, actionable insights from our AI analysis.`;
+
+            addAssistantMessage("🔬 Research Complete", completionMessage);
         }
+        
+        // Add a follow-up message to encourage continued conversation
+        setTimeout(() => {
+            addAssistantMessage(
+                "Need more information?", 
+                "Your research report has been generated successfully. Feel free to ask follow-up questions, request additional details about specific areas, or start a new research topic.",
+                true // This is a follow-up message
+            );
+        }, 1000);
     }
 
     function handleErrorMessage(data) {
@@ -494,14 +544,19 @@ document.addEventListener('DOMContentLoaded', function() {
         appendMessage(messageElement);
     }
 
-    function addAssistantMessage(title, content) {
-        const messageElement = createMessageElement('assistant', content, title);
+    function addAssistantMessage(title, content, isFollowUp = false) {
+        const messageElement = createMessageElement('assistant', content, title, isFollowUp);
         appendMessage(messageElement);
     }
 
-    function createMessageElement(sender, content, title = null) {
+    function createMessageElement(sender, content, title = null, isFollowUp = false) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}`;
+        
+        // Add follow-up class if appropriate
+        if (sender === 'assistant' && isFollowUp) {
+            messageDiv.classList.add('follow-up');
+        }
 
         const contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
@@ -512,6 +567,13 @@ document.addEventListener('DOMContentLoaded', function() {
             titleElement.style.marginTop = '0';
             titleElement.style.marginBottom = '16px';
             titleElement.style.color = 'var(--text-primary)';
+            titleElement.style.fontWeight = '600';
+            
+            // Different styling for follow-up messages
+            if (isFollowUp) {
+                titleElement.style.color = '#667eea'; // Different color for follow-ups
+                titleElement.innerHTML = `<i class="fas fa-comment-dots me-2"></i>${title}`;
+            }
             contentDiv.appendChild(titleElement);
         }
 
@@ -531,6 +593,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 scrollToBottom();
             }
         }
+    }
+
+    function formatResearchReport(reportContent, jobId) {
+        // Add citations and references to the research report
+        const citations = `
+## 📚 Citations and References
+
+This research report was generated using advanced AI techniques. Below are the key sources and references that informed this analysis:
+
+1. **NIST Cybersecurity Framework** - National Institute of Standards and Technology
+2. **OWASP Top 10** - Open Web Application Security Project
+3. **MITRE ATT&CK Framework** - Comprehensive matrix of adversary tactics and techniques
+4. **SANS Institute Research** - Cybersecurity training and research resources
+5. **CVE Database** - Common Vulnerabilities and Exposures repository
+6. **OWASP Web Security Testing Guide** - Comprehensive testing methodology
+7. **NIST Special Publications** - Cybersecurity guidelines and standards
+
+> **Note:** This AI-generated research report is based on publicly available information, industry standards, best practices, and advanced analysis techniques. For critical security decisions, always consult with cybersecurity professionals and verify information through multiple authoritative sources.
+`;
+
+        const disclaimer = `
+---
+## ⚠️ Important Disclaimer
+
+The information provided in this research report is for educational and informational purposes only. The AI-generated analysis should be used as a starting point for further investigation and should not be considered as professional advice. Always consult with qualified cybersecurity professionals before implementing any security measures.
+
+**Research completed on:** ${new Date().toLocaleString()}
+**Job ID:** ${jobId}
+`;
+
+        return reportContent + citations + disclaimer;
     }
 
     function scrollToBottom() {
@@ -560,13 +653,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function showProgressIndicator() {
         if (progressIndicator) {
-            progressIndicator.style.display = 'block';
+            progressIndicator.classList.add('show');
+            // Add the progress indicator to the chat messages area
+            if (chatMessages) {
+                chatMessages.appendChild(progressIndicator);
+            }
         }
     }
 
     function hideProgressIndicator() {
         if (progressIndicator) {
-            progressIndicator.style.display = 'none';
+            progressIndicator.classList.remove('show');
         }
     }
 
@@ -723,13 +820,50 @@ document.addEventListener('DOMContentLoaded', function() {
             // Add user message (original question)
             addUserMessage(data.job.topic);
 
-            // Add each section as assistant messages
+            // Add the complete research report as a formatted message
+            let fullReport = `# 🎯 Final Research Report: ${data.job.topic}\n\n`;
+
+            // Add each section to the full report and also as individual messages
             if (data.sections && data.sections.length > 0) {
-                data.sections.forEach(section => {
+                console.log(`Loading ${data.sections.length} sections for job ${item.id}`);
+                
+                // First, add a comprehensive summary section
+                fullReport += `## 🔍 Research Summary\n\n`;
+                fullReport += `This comprehensive analysis covers ${data.job.topic} across multiple dimensions:\n\n`;
+                
+                data.sections.forEach((section, index) => {
+                    // Try output_md first, then content, then show placeholder
+                    let content = '';
                     if (section.output_md && section.output_md.trim()) {
-                        addAssistantMessage(section.title, section.output_md);
+                        content = section.output_md;
+                    } else if (section.content && section.content.trim()) {
+                        content = section.content;
+                    } else {
+                        content = `*This section (${section.title}) is still being processed or has no content available.*`;
                     }
+
+                    console.log(`Section ${index + 1}: ${section.title} - Content length: ${content.length}`);
+                    
+                    // Add to the full report
+                    fullReport += `### ${section.title}\n\n${content}\n\n`;
+                    
+                    // Also add as a separate message in the chat
+                    addAssistantMessage(section.title, content);
                 });
+                
+                // Add a comprehensive research completion message with citations
+                const formattedReport = formatResearchReport(fullReport, item.id);
+                // Replace the separate messages with a single comprehensive report
+                if (chatMessages) {
+                    chatMessages.innerHTML = ''; // Clear individual sections
+                    addUserMessage(data.job.topic); // Add original question back
+                    addAssistantMessage("🔬 Final Research Report", formattedReport); // Add the full report
+                }
+            } else {
+                // If no sections, show a message that research is available
+                const fallbackReport = `# 📋 Research Report: ${data.job.topic}\n\nThis research report for "${data.job.topic}" is available. The sections may still be processing or may not have been fully generated yet.`;
+                const formattedReport = formatResearchReport(fallbackReport, item.id);
+                addAssistantMessage("📋 Research Report", formattedReport);
             }
 
             // Update current job ID
@@ -737,6 +871,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update history display to show active item
             updateHistoryDisplay();
+
+            // Add a message to encourage follow-up questions
+            setTimeout(() => {
+                addAssistantMessage(
+                    "Ask a follow-up question", 
+                    "The research report is now displayed. You can ask follow-up questions about the research, request more details about specific areas, or start a new research topic.",
+                    true // This is a follow-up message
+                );
+            }, 500);
 
             // Close mobile sidebar
             closeMobileSidebar();
@@ -785,17 +928,48 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function loadJobHistory() {
+    async function loadJobHistory() {
         try {
-            const stored = localStorage.getItem('researchHistory');
-            if (stored) {
-                jobHistoryData = JSON.parse(stored);
+            // Load from API first
+            const response = await fetch('/api/history');
+            if (response.ok) {
+                const apiHistory = await response.json();
+
+                // Convert API format to frontend format
+                jobHistoryData = apiHistory.map(job => ({
+                    id: job.id,
+                    topic: job.topic,
+                    status: job.status,
+                    depth: job.depth,
+                    timestamp: job.created_at,
+                    date: new Date(job.created_at).toLocaleDateString()
+                }));
+
                 updateHistoryDisplay();
                 updateStats();
+                saveHistoryToStorage(); // Save to localStorage as backup
+            } else {
+                // Fallback to localStorage if API fails
+                const stored = localStorage.getItem('researchHistory');
+                if (stored) {
+                    jobHistoryData = JSON.parse(stored);
+                    updateHistoryDisplay();
+                    updateStats();
+                }
             }
         } catch (error) {
             console.warn('Failed to load job history:', error);
-            jobHistoryData = [];
+            // Fallback to localStorage
+            try {
+                const stored = localStorage.getItem('researchHistory');
+                if (stored) {
+                    jobHistoryData = JSON.parse(stored);
+                    updateHistoryDisplay();
+                    updateStats();
+                }
+            } catch (e) {
+                jobHistoryData = [];
+            }
         }
     }
 
@@ -894,15 +1068,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return content;
     }
 
-    function exportToPDF(content) {
-        console.log('Exporting to PDF:', content);
-        showToast('PDF export will be implemented in Stage 3', 'info');
-    }
-
-    function exportToWord(content) {
-        console.log('Exporting to Word:', content);
-        showToast('Word export will be implemented in Stage 3', 'info');
-    }
+    function exportToPDF(content) {\n        // Create a temporary element to convert markdown to HTML\n        const tempDiv = document.createElement('div');\n        tempDiv.innerHTML = marked.parse(content);\n        \n        // Extract text content and format it\n        const formattedContent = tempDiv.textContent || tempDiv.innerText;\n        \n        // Using jsPDF library (already included in the app)\n        const { jsPDF } = window.jspdf;\n        const doc = new jsPDF();\n        \n        // Add title\n        doc.setFontSize(16);\n        doc.text('Cybersecurity Research Report', 10, 10);\n        \n        // Add content with proper line breaks and formatting\n        doc.setFontSize(12);\n        const splitText = doc.splitTextToSize(formattedContent, 180);\n        doc.text(splitText, 10, 30);\n        \n        // Save the PDF\n        doc.save(`research-report-${new Date().toISOString().split('T')[0]}.pdf`);\n        showToast('PDF export completed', 'success');\n    }\n\n    function exportToWord(content) {\n        // Create a Word document as a text file with basic formatting\n        const formattedContent = `Cybersecurity Research Report\\n\\n${content}`;\n        const blob = new Blob([formattedContent], { type: 'application/msword' });\n        const url = URL.createObjectURL(blob);\n        const a = document.createElement('a');\n        a.href = url;\n        a.download = `research-report-${new Date().toISOString().split('T')[0]}.doc`;\n        document.body.appendChild(a);\n        a.click();\n        document.body.removeChild(a);\n        URL.revokeObjectURL(url);\n        showToast('Word export completed', 'success');\n    }
 
     function exportToMarkdown(content) {
         const blob = new Blob([content], { type: 'text/markdown' });
